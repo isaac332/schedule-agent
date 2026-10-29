@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@llm-multi-provider/core": ["./llm-multi-provider/src/index.ts"],
+      "@llm-multi-provider/core/*": ["./llm-multi-provider/src/*"]
     }
   },
   "include": [

@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #090a0f;
+  --foreground: #f4f4f6;
 }
 
 @theme inline {
@@ -12,15 +12,140 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+}
+
+/* --- Light-Dismiss Modal Dialog Backdrop (light-dismiss-a-dialog) --- */
+dialog::backdrop {
+  background-color: rgba(4, 6, 14, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+/* --- Responsive Data Table with Container Queries & Sticky Headers (responsive-table) --- */
+.table-wrapper {
+  overflow: auto;
+  max-inline-size: 100%;
+  max-block-size: min(460px, 72vh);
+  container-type: inline-size;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(17, 19, 28, 0.75);
+}
+
+.studio-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  --label-2: "Session Package";
+  --label-3: "Date & Time";
+  --label-4: "Contact";
+  --label-5: "Status";
+  --label-6: "Actions";
+}
+
+.studio-table thead {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+  background: #141722;
+}
+
+.studio-table tbody th {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: #121520;
+}
+
+@container (width < 600px) {
+  .studio-table,
+  .studio-table thead,
+  .studio-table tbody,
+  .studio-table tr,
+  .studio-table th,
+  .studio-table td {
+    display: block;
+  }
+
+  .studio-table thead {
+    display: none;
+  }
+
+  .studio-table tr {
+    margin-block-end: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+
+  .studio-table tbody th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+    background: #1c2030;
+  }
+
+  .studio-table td:nth-child(2)::before {
+    content: var(--label-2) ": ";
+    font-weight: 600;
+    color: #94a3b8;
+  }
+  .studio-table td:nth-child(3)::before {
+    content: var(--label-3) ": ";
+    font-weight: 600;
+    color: #94a3b8;
+  }
+  .studio-table td:nth-child(4)::before {
+    content: var(--label-4) ": ";
+    font-weight: 600;
+    color: #94a3b8;
+  }
+  .studio-table td:nth-child(5)::before {
+    content: var(--label-5) ": ";
+    font-weight: 600;
+    color: #94a3b8;
+  }
+  .studio-table td:nth-child(6)::before {
+    content: var(--label-6) ": ";
+    font-weight: 600;
+    color: #94a3b8;
+  }
+}
+
+/* --- Validate Input After Interaction (validate-input-after-interaction) --- */
+.field-hint {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.error-msg {
+  display: none;
+  color: #f87171;
+  font-size: 0.78rem;
+  margin-top: 0.3rem;
+}
+
+.studio-input:user-invalid,
+.studio-input.user-invalid-fallback {
+  border-color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.studio-input:user-invalid + .error-msg,
+.studio-input.user-invalid-fallback + .error-msg {
+  display: block;
+}
+
+.studio-input:user-valid,
+.studio-input.user-valid-fallback {
+  border-color: #10b981;
+}
+
+.field:has(.studio-input:user-invalid) .field-hint {
+  color: #fca5a5;
 }
