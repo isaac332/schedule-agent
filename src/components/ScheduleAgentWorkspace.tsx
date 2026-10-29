@@ -120,6 +120,10 @@ export function ScheduleAgentWorkspace() {
   const [isProviderDialogOpen, setIsProviderDialogOpen] = useState(false);
   const [isWebhookDialogOpen, setIsWebhookDialogOpen] = useState(false);
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [resetClearApiKeys, setResetClearApiKeys] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetToastMessage, setResetToastMessage] = useState("");
   const [webhookTestOutput, setWebhookTestOutput] = useState<string>("");
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
 
@@ -346,28 +350,72 @@ export function ScheduleAgentWorkspace() {
     }
   };
 
-  const handleResetDemo = async () => {
-    await fetch("/api/agent/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId: "web-pilot-session", resetSession: true }),
-    });
-    await fetch("/api/appointments", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "reset" }),
-    });
-    msgSeqRef.current += 1;
-    setLlmHistory([]);
-    setMessages([
-      {
-        id: `welcome-${msgSeqRef.current}`,
-        role: "assistant",
-        text: "Session & studio calendar reset to fresh demo state! How can I help schedule your shoot today?",
-        timestamp: `reset-${msgSeqRef.current}`,
-      },
-    ]);
-    fetchScheduleData();
+  const handleFullReset = async (options?: { clearApiKeys?: boolean }) => {
+    setIsResetting(true);
+    try {
+      const res = await fetch("/api/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serviceId: "headshot-express" }),
+      });
+      const data = await res.json();
+
+      if (data.appointments) setAppointments(data.appointments);
+      if (data.waitlist) setWaitlist(data.waitlist);
+      if (data.selectedDateAvailability) {
+        setDayAvailability(data.selectedDateAvailability);
+        setSelectedDate(data.selectedDateAvailability.date);
+        setFormDate(data.selectedDateAvailability.date);
+      }
+      if (data.weekAvailability) setWeekAvailability(data.weekAvailability);
+      if (data.nextOpenDates) setNextOpenDates(data.nextOpenDates);
+
+      msgSeqRef.current += 1;
+      setLlmHistory([]);
+      setMessages([
+        {
+          id: `welcome-${msgSeqRef.current}`,
+          role: "assistant",
+          text: "Hi! 👋 I'm Maya, the AI Booking Coordinator at Lumina Portrait & Creative Studio.\n\nText me anytime to check available photo shoot bookings, calculate custom quotes with add-ons, or book/reschedule a session. How can I help you today?",
+          timestamp: `reset-${msgSeqRef.current}`,
+        },
+      ]);
+      setClientPhone("(555) 019-2834");
+      setInputMessage("");
+      setSelectedServiceId("headshot-express");
+      setLastTelemetry(null);
+      setMobileTab("chat");
+      setStudioPanelTab("all");
+
+      if (options?.clearApiKeys) {
+        setGeminiKey("");
+        setOpenrouterKey("");
+        setGeminiModel("");
+        setOpenrouterModel("");
+      }
+
+      setIsResetDialogOpen(false);
+      setResetToastMessage("✨ Studio appointments, priority waitlist, and SMS chat restored to initial state!");
+      setTimeout(() => setResetToastMessage(""), 4500);
+    } catch (err: unknown) {
+      console.error("Failed to reset studio:", err);
+      // Fallback to local reset
+      msgSeqRef.current += 1;
+      setMessages([
+        {
+          id: `err-reset-${msgSeqRef.current}`,
+          role: "assistant",
+          text: "Session reset to fresh demo state! How can I help you today?",
+          timestamp: `reset-${msgSeqRef.current}`,
+        },
+      ]);
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleResetDemo = () => {
+    setIsResetDialogOpen(true);
   };
 
   const handleCancelBooking = async (bookingRef: string) => {
@@ -576,6 +624,17 @@ export function ScheduleAgentWorkspace() {
               <span className="hidden sm:inline">Webhook</span>
             </button>
 
+            {/* Reset Everything Button */}
+            <button
+              type="button"
+              onClick={() => setIsResetDialogOpen(true)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-slate-200 transition hover:border-amber-400/40 hover:bg-white/10 active:scale-[0.98]"
+              title="Reset everything back to initial state"
+            >
+              <RefreshCw className="h-3.5 w-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Reset</span>
+            </button>
+
             {/* New Booking CTA */}
             <button
               type="button"
@@ -591,6 +650,18 @@ export function ScheduleAgentWorkspace() {
           </div>
         </div>
       </header>
+
+      {/* Floating Reset Toast Notification */}
+      {resetToastMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed top-16 right-4 z-50 flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-[#0e1713]/95 px-4 py-2.5 text-xs font-semibold text-emerald-200 shadow-xl backdrop-blur-md animate-in fade-in"
+        >
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+          <span>{resetToastMessage}</span>
+        </div>
+      )}
 
       {/* Main Responsive Workspace Grid */}
       <main className="mx-auto max-w-7xl px-3 pt-3 sm:px-6 sm:pt-5">
@@ -1828,6 +1899,80 @@ export function ScheduleAgentWorkspace() {
             </button>
           </div>
         </form>
+      </LightDismissDialog>
+
+      {/* DIALOG 4: Reset Studio to Initial State Modal */}
+      <LightDismissDialog
+        open={isResetDialogOpen}
+        onClose={() => setIsResetDialogOpen(false)}
+        title="Reset Everything to Initial State"
+        subtitle="Restore the studio calendar, priority waitlist, and SMS chat coordinator back to factory defaults."
+      >
+        <div className="space-y-4 text-xs">
+          <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.08] p-4 text-slate-200">
+            <p className="font-semibold text-amber-300">
+              This action will reset:
+            </p>
+            <ul className="mt-2 space-y-1.5 text-[11px] text-slate-300">
+              <li className="flex items-center gap-2">
+                <span className="text-amber-400">✓</span>
+                <span>
+                  <strong>4 Seed Studio Bookings</strong> (Elena Rostova, Marcus &amp; Priya Vance, Devon Brooks, Solstice Roasters)
+                </span>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-amber-400">✓</span>
+                <span>
+                  <strong>Priority Waitlist Queue</strong> (Chloe Sterling WTL-8104 reset to waiting)
+                </span>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-amber-400">✓</span>
+                <span>
+                  <strong>SMS Chat Session</strong> (Conversation history cleared, welcome greeting restored)
+                </span>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-amber-400">✓</span>
+                <span>
+                  <strong>Client Contact Info</strong> (Phone reset to default (555) 019-2834)
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.02] p-3 text-slate-300 transition hover:bg-white/5">
+            <input
+              type="checkbox"
+              checked={resetClearApiKeys}
+              onChange={(e) => setResetClearApiKeys(e.target.checked)}
+              className="h-4 w-4 rounded accent-amber-500"
+            />
+            <span className="text-xs">
+              Also clear custom runtime API keys &amp; model overrides
+            </span>
+          </label>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              disabled={isResetting}
+              onClick={() => setIsResetDialogOpen(false)}
+              className="h-10 rounded-xl border border-white/10 px-4 text-xs text-slate-300 hover:bg-white/5 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={isResetting}
+              onClick={() => handleFullReset({ clearApiKeys: resetClearApiKeys })}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isResetting ? "animate-spin" : ""}`} />
+              <span>{isResetting ? "Resetting..." : "Reset Everything"}</span>
+            </button>
+          </div>
+        </div>
       </LightDismissDialog>
     </div>
   );
