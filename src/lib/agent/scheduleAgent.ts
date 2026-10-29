@@ -109,20 +109,23 @@ export function resolveProviderSetup(config?: RuntimeProviderConfig): {
 
   const mode: ProviderMode = config?.mode || defaultMode;
 
+  const geminiModelChoice = (config?.geminiModel || process.env.GEMINI_MODEL || "").trim();
+  const openrouterModelChoice = (config?.openrouterModel || process.env.OPENROUTER_MODEL || "").trim();
+
   const geminiProvider = new GeminiProvider(
     geminiConfigured ? geminiKey : "",
-    config?.geminiModel
-      ? { mainModel: config.geminiModel, fastModel: config.geminiModel }
+    geminiModelChoice
+      ? { mainModel: geminiModelChoice, fastModel: geminiModelChoice }
       : undefined,
   );
 
   const openrouterProvider = new OpenRouterProvider(
     openrouterConfigured ? openrouterKey : "",
-    config?.openrouterModel
+    openrouterModelChoice
       ? {
-          mainModel: config.openrouterModel,
-          fastModel: config.openrouterModel,
-          plannerModel: config.openrouterModel,
+          mainModel: openrouterModelChoice,
+          fastModel: openrouterModelChoice,
+          plannerModel: openrouterModelChoice,
         }
       : undefined,
   );
