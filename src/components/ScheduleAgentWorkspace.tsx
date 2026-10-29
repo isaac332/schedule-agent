@@ -2,13 +2,16 @@
 
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
+  BellRing,
   Bot,
   Calendar,
+  Camera,
   CheckCircle2,
   Clock,
   Code2,
   Cpu,
   DollarSign,
+  FileCheck2,
   KeyRound,
   MessageSquare,
   Phone,
@@ -28,7 +31,10 @@ import type {
   DayAvailability,
   ProviderMode,
   ProviderTelemetry,
+  StudioAddOn,
+  StudioPhotographer,
   StudioService,
+  WaitlistEntry,
 } from "@/lib/studio/types";
 import { formatPrettyDate, formatTime12h } from "@/lib/calendar/dateUtils";
 import { LightDismissDialog } from "./LightDismissDialog";
@@ -61,7 +67,10 @@ const PROVIDER_MODE_LABELS: Record<
 
 export function ScheduleAgentWorkspace() {
   const [services, setServices] = useState<StudioService[]>([]);
+  const [addOns, setAddOns] = useState<StudioAddOn[]>([]);
+  const [photographers, setPhotographers] = useState<StudioPhotographer[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedServiceId, setSelectedServiceId] = useState<string>("headshot-express");
   const [dayAvailability, setDayAvailability] = useState<DayAvailability | null>(null);
@@ -130,7 +139,10 @@ export function ScheduleAgentWorkspace() {
       const data = await res.json();
 
       setServices(data.services || []);
+      setAddOns(data.addOns || []);
+      setPhotographers(data.photographers || []);
       setAppointments(data.appointments || []);
+      setWaitlist(data.waitlist || []);
       setDayAvailability(data.selectedDateAvailability || null);
       setWeekAvailability(data.weekAvailability || []);
       setNextOpenDates(data.nextOpenDates || []);
@@ -150,7 +162,10 @@ export function ScheduleAgentWorkspace() {
       .then((data) => {
         if (!active || !data) return;
         setServices(data.services || []);
+        setAddOns(data.addOns || []);
+        setPhotographers(data.photographers || []);
         setAppointments(data.appointments || []);
+        setWaitlist(data.waitlist || []);
         setDayAvailability(data.selectedDateAvailability || null);
         setWeekAvailability(data.weekAvailability || []);
         setNextOpenDates(data.nextOpenDates || []);
@@ -269,6 +284,7 @@ export function ScheduleAgentWorkspace() {
           clientPhone,
           message: text,
           clientAppointments: appointments.length > 0 ? appointments : undefined,
+          clientWaitlist: waitlist.length > 0 ? waitlist : undefined,
           clientHistory: llmHistory.length > 0 ? llmHistory : undefined,
           providerConfig: {
             mode: providerMode,
@@ -289,6 +305,9 @@ export function ScheduleAgentWorkspace() {
       }
       if (data.telemetry) {
         setLastTelemetry(data.telemetry);
+      }
+      if (data.waitlist) {
+        setWaitlist(data.waitlist);
       }
       if (data.appointments) {
         setAppointments(data.appointments);
@@ -416,20 +435,28 @@ export function ScheduleAgentWorkspace() {
       text: `Can you check what bookings are available for portraits this week?`,
     },
     {
-      label: "Pricing & Packages",
-      text: "Hi! What photography packages and prices do you offer?",
+      label: "Custom Quote + Add-Ons",
+      text: "Can you calculate a quote for a Signature Portrait with Hair & Makeup and 24-Hour Rush Delivery?",
     },
     {
-      label: "Check Open Slots",
-      text: `What times do you have available for an Express Headshot on ${firstOpenDate}?`,
+      label: "Photographers & Backdrops",
+      text: "Who are your studio photographers and what backdrops do you have available?",
     },
     {
       label: "Instant Book Test",
       text: `Please book an Express Headshot on ${firstOpenDate} at 11:30 AM for Jordan Taylor, email jordan.taylor@studio.co`,
     },
     {
-      label: "Lookup LUM-2041",
-      text: "Can you check the status of my booking LUM-2041?",
+      label: "Upgrade LUM-2041",
+      text: "For my booking LUM-2041, can we add 5 Extra Retouched Digitals and request Elena Vance?",
+    },
+    {
+      label: "Prep Guide & Deposit Link",
+      text: "Can you send me the prep checklist and deposit link for booking LUM-2055?",
+    },
+    {
+      label: "Join Waitlist",
+      text: `Can you put me on the waitlist for an Express Headshot on ${firstOpenDate} morning? I'm Alex Kim, email alex@kim.co`,
     },
     {
       label: "Reschedule LUM-2041",
@@ -941,12 +968,33 @@ export function ScheduleAgentWorkspace() {
                           </span>
                           <span>{apt.clientName}</span>
                         </div>
+                        {apt.photographerName && (
+                          <div className="mt-1 inline-flex items-center gap-1 text-[10px] text-slate-400">
+                            <Camera className="h-3 w-3 text-indigo-400" />
+                            <span>{apt.photographerName}</span>
+                          </div>
+                        )}
                       </th>
                       <td className="px-3.5 py-3 text-slate-200">
                         <div>{apt.serviceName}</div>
                         <div className="text-[11px] text-slate-400">
                           {apt.durationMinutes}m • ${apt.price}
                         </div>
+                        {apt.addOns && apt.addOns.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {apt.addOns.map((addonId) => {
+                              const foundAddon = addOns.find((a) => a.id === addonId);
+                              return (
+                                <span
+                                  key={addonId}
+                                  className="rounded bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-medium text-violet-300"
+                                >
+                                  +{foundAddon ? foundAddon.name : addonId}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                       </td>
                       <td className="px-3.5 py-3 text-slate-200">
                         <div className="font-medium">
@@ -964,23 +1012,31 @@ export function ScheduleAgentWorkspace() {
                         </div>
                       </td>
                       <td className="px-3.5 py-3">
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
-                            apt.status === "confirmed"
-                              ? "bg-emerald-500/15 text-emerald-300"
-                              : apt.status === "rescheduled"
-                                ? "bg-cyan-500/15 text-cyan-300"
-                                : "bg-rose-500/15 text-rose-300"
-                          }`}
-                        >
-                          {apt.status === "confirmed" && (
-                            <CheckCircle2 className="h-3 w-3" />
+                        <div className="flex flex-col items-start gap-1">
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                              apt.status === "confirmed"
+                                ? "bg-emerald-500/15 text-emerald-300"
+                                : apt.status === "rescheduled"
+                                  ? "bg-cyan-500/15 text-cyan-300"
+                                  : "bg-rose-500/15 text-rose-300"
+                            }`}
+                          >
+                            {apt.status === "confirmed" && (
+                              <CheckCircle2 className="h-3 w-3" />
+                            )}
+                            {apt.status === "cancelled" && (
+                              <XCircle className="h-3 w-3" />
+                            )}
+                            {apt.status}
+                          </span>
+                          {apt.prepGuideSent && (
+                            <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-medium text-amber-300">
+                              <FileCheck2 className="h-2.5 w-2.5" />
+                              Prep &amp; Deposit Sent
+                            </span>
                           )}
-                          {apt.status === "cancelled" && (
-                            <XCircle className="h-3 w-3" />
-                          )}
-                          {apt.status}
-                        </span>
+                        </div>
                       </td>
                       <td className="px-3.5 py-3 text-right">
                         {apt.status !== "cancelled" && (
@@ -999,6 +1055,103 @@ export function ScheduleAgentWorkspace() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          {/* Priority Waitlist & Studio Creative Team / Add-Ons Panel */}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {/* Priority Waitlist Card */}
+            <div className="rounded-2xl border border-white/10 bg-[#111420] p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BellRing className="h-4 w-4 text-amber-400" />
+                  <h2 className="text-sm font-semibold text-white">
+                    Priority Waitlist Queue
+                  </h2>
+                </div>
+                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                  {waitlist.length} Active
+                </span>
+              </div>
+              <p className="mb-3 text-[11px] text-slate-400">
+                Auto-notifies waitlisted clients when a booking on their target date is cancelled or rescheduled.
+              </p>
+              <div className="space-y-2.5">
+                {waitlist.map((wl) => (
+                  <div
+                    key={wl.id}
+                    className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5 text-xs"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded bg-amber-500/20 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-amber-300">
+                          {wl.waitlistRef}
+                        </span>
+                        <span className="font-medium text-white">
+                          {wl.clientName}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-slate-400">
+                        {wl.serviceName} • {formatPrettyDate(wl.preferredDate)} ({wl.preferredTimeWindow})
+                      </div>
+                    </div>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                        wl.status === "slot_opened"
+                          ? "bg-emerald-500/20 text-emerald-300"
+                          : "bg-slate-800 text-slate-300"
+                      }`}
+                    >
+                      {wl.status === "slot_opened" ? "Slot Opened • Alerted" : "Waiting"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Studio Team & Add-On Enhancements Card */}
+            <div className="rounded-2xl border border-white/10 bg-[#111420] p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Camera className="h-4 w-4 text-indigo-400" />
+                  <h2 className="text-sm font-semibold text-white">
+                    Studio Team &amp; Add-On Upgrades
+                  </h2>
+                </div>
+                <span className="rounded-full bg-indigo-500/15 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">
+                  11 Agent Tools
+                </span>
+              </div>
+              <div className="space-y-2">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  Lead Photographers
+                </div>
+                {photographers.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] px-2.5 py-1.5 text-xs"
+                  >
+                    <div>
+                      <span className="font-medium text-white">{p.name}</span>{" "}
+                      <span className="text-[11px] text-slate-400">({p.role})</span>
+                    </div>
+                    <span className="text-[10px] text-indigo-300">{p.assignedRoom}</span>
+                  </div>
+                ))}
+                <div className="pt-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  Session Add-Ons (`calculateSessionQuote`)
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {addOns.map((a) => (
+                    <span
+                      key={a.id}
+                      className="rounded-lg border border-violet-500/25 bg-violet-500/10 px-2 py-1 text-[10px] text-violet-200"
+                    >
+                      {a.name} (+${a.price})
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>

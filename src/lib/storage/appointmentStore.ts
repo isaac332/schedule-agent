@@ -1,17 +1,22 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { STUDIO_SERVICES } from "../studio/config";
-import type { Appointment, ConversationSession } from "../studio/types";
+import { STUDIO_SERVICES, findPhotographer } from "../studio/config";
+import type {
+  Appointment,
+  ConversationSession,
+  WaitlistEntry,
+} from "../studio/types";
 import { formatLocalDate, getNextOpenStudioDates } from "../calendar/dateUtils";
 
 interface StoreData {
   appointments: Appointment[];
+  waitlist: WaitlistEntry[];
   sessions: Record<string, ConversationSession>;
   initializedAt: string;
 }
 
-const TMP_STORE_PATH = path.join(os.tmpdir(), "lumina-studio-pilot-store-v1.json");
+const TMP_STORE_PATH = path.join(os.tmpdir(), "lumina-studio-pilot-store-v2.json");
 
 function createSeedAppointments(): Appointment[] {
   const todayStr = formatLocalDate(new Date());
@@ -37,6 +42,9 @@ function createSeedAppointments(): Appointment[] {
       durationMinutes: 30,
       price: 149,
       participants: 1,
+      photographerName: "Marcus Chen",
+      addOns: [],
+      prepGuideSent: true,
       notes: "Charcoal and warm bone backdrops for keynote speaker bio.",
       status: "confirmed",
       createdAt: nowIso,
@@ -55,8 +63,11 @@ function createSeedAppointments(): Appointment[] {
       startTime: "14:00",
       endTime: "15:00",
       durationMinutes: 60,
-      price: 325,
+      price: 450,
       participants: 3,
+      photographerName: "Sofia Patel",
+      addOns: ["Professional Hair & Camera-Ready Makeup"],
+      prepGuideSent: true,
       notes: "Maternity + toddler shoot; requesting ivory linen studio wrap.",
       status: "confirmed",
       createdAt: nowIso,
@@ -77,6 +88,9 @@ function createSeedAppointments(): Appointment[] {
       durationMinutes: 75,
       price: 295,
       participants: 1,
+      photographerName: "Sofia Patel",
+      addOns: [],
+      prepGuideSent: false,
       notes: "Bringing architecture portfolio props + regalia.",
       status: "confirmed",
       createdAt: nowIso,
@@ -95,13 +109,39 @@ function createSeedAppointments(): Appointment[] {
       startTime: "13:00",
       endTime: "15:00",
       durationMinutes: 120,
-      price: 550,
+      price: 660,
       participants: 3,
+      photographerName: "Elena Vance",
+      addOns: ["Behind-the-Scenes 4K Vertical Social Reel"],
+      prepGuideSent: true,
       notes: "Founder portraits + espresso packaging tabletop lighting.",
       status: "confirmed",
       createdAt: nowIso,
       updatedAt: nowIso,
       source: "dashboard",
+    },
+  ];
+}
+
+function createSeedWaitlist(): WaitlistEntry[] {
+  const todayStr = formatLocalDate(new Date());
+  const openDates = getNextOpenStudioDates(todayStr, 5);
+  const d1 = openDates[0] || todayStr;
+
+  return [
+    {
+      id: "wl-seed-1",
+      waitlistRef: "WTL-8104",
+      clientName: "Chloe Sterling",
+      clientPhone: "(555) 712-9044",
+      clientEmail: "chloe@sterlingpr.com",
+      serviceId: "headshot-express",
+      serviceName: "Express Headshot Session",
+      preferredDate: d1,
+      preferredTimeWindow: "Morning (10:00 AM preferred)",
+      notes: "Hoping for a 10:00 AM slot if one opens up before press release.",
+      status: "waiting",
+      createdAt: new Date().toISOString(),
     },
   ];
 }
@@ -112,6 +152,9 @@ declare global {
 
 function loadStore(): StoreData {
   if (globalThis.__LUMINA_STUDIO_STORE__) {
+    if (!Array.isArray(globalThis.__LUMINA_STUDIO_STORE__.waitlist)) {
+      globalThis.__LUMINA_STUDIO_STORE__.waitlist = createSeedWaitlist();
+    }
     return globalThis.__LUMINA_STUDIO_STORE__;
   }
 
@@ -120,6 +163,9 @@ function loadStore(): StoreData {
       const raw = fs.readFileSync(TMP_STORE_PATH, "utf-8");
       const parsed = JSON.parse(raw) as StoreData;
       if (parsed && Array.isArray(parsed.appointments)) {
+        if (!Array.isArray(parsed.waitlist)) {
+          parsed.waitlist = createSeedWaitlist();
+        }
         globalThis.__LUMINA_STUDIO_STORE__ = parsed;
         return parsed;
       }
@@ -130,6 +176,7 @@ function loadStore(): StoreData {
 
   const initial: StoreData = {
     appointments: createSeedAppointments(),
+    waitlist: createSeedWaitlist(),
     sessions: {},
     initializedAt: new Date().toISOString(),
   };
@@ -155,6 +202,13 @@ export function getAllAppointments(): Appointment[] {
     if (cmpDate !== 0) return cmpDate;
     return a.startTime.localeCompare(b.startTime);
   });
+}
+
+export function getAllWaitlistEntries(): WaitlistEntry[] {
+  const store = loadStore();
+  return [...store.waitlist].sort((a, b) =>
+    a.preferredDate.localeCompare(b.preferredDate),
+  );
 }
 
 export function getAppointmentsByDate(dateStr: string): Appointment[] {
@@ -189,12 +243,17 @@ export function createBookingRecord(input: {
   startTime: string;
   endTime: string;
   participants?: number;
+  photographerName?: string;
+  addOns?: string[];
+  extraPrice?: number;
   notes?: string;
   source?: "sms" | "web" | "dashboard";
 }): Appointment {
   const store = loadStore();
   const service =
     STUDIO_SERVICES.find((s) => s.id === input.serviceId) || STUDIO_SERVICES[0];
+  const assignedPhoto =
+    input.photographerName || findPhotographer(service.id).name;
 
   const randomCode = Math.floor(3000 + Math.random() * 6999);
   const bookingRef = `LUM-${randomCode}`;
@@ -212,8 +271,11 @@ export function createBookingRecord(input: {
     startTime: input.startTime,
     endTime: input.endTime,
     durationMinutes: service.durationMinutes,
-    price: service.price,
+    price: service.price + (input.extraPrice || 0),
     participants: input.participants || 1,
+    photographerName: assignedPhoto,
+    addOns: input.addOns || [],
+    prepGuideSent: false,
     notes: input.notes?.trim() || "",
     status: "confirmed",
     createdAt: nowIso,
@@ -226,12 +288,57 @@ export function createBookingRecord(input: {
   return newApt;
 }
 
+export function createWaitlistRecord(input: {
+  clientName: string;
+  clientPhone: string;
+  clientEmail: string;
+  serviceId: string;
+  preferredDate: string;
+  preferredTimeWindow: string;
+  notes?: string;
+}): WaitlistEntry {
+  const store = loadStore();
+  const service =
+    STUDIO_SERVICES.find((s) => s.id === input.serviceId) || STUDIO_SERVICES[0];
+  const randomCode = Math.floor(8110 + Math.random() * 1800);
+  const entry: WaitlistEntry = {
+    id: `wl-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    waitlistRef: `WTL-${randomCode}`,
+    clientName: input.clientName.trim(),
+    clientPhone: input.clientPhone.trim(),
+    clientEmail: input.clientEmail.trim(),
+    serviceId: service.id,
+    serviceName: service.name,
+    preferredDate: input.preferredDate,
+    preferredTimeWindow: input.preferredTimeWindow || "Flexible / Any open slot",
+    notes: input.notes?.trim() || "",
+    status: "waiting",
+    createdAt: new Date().toISOString(),
+  };
+
+  store.waitlist.push(entry);
+  persistStore(store);
+  return entry;
+}
+
 export function updateBookingRecord(
   bookingRefOrId: string,
   updates: Partial<
     Pick<
       Appointment,
-      "date" | "startTime" | "endTime" | "status" | "notes" | "serviceId" | "serviceName" | "durationMinutes" | "price"
+      | "date"
+      | "startTime"
+      | "endTime"
+      | "status"
+      | "notes"
+      | "serviceId"
+      | "serviceName"
+      | "durationMinutes"
+      | "price"
+      | "participants"
+      | "photographerName"
+      | "addOns"
+      | "prepGuideSent"
     >
   >,
 ): Appointment | null {
@@ -242,11 +349,25 @@ export function updateBookingRecord(
   );
   if (idx === -1) return null;
 
+  const previousDate = store.appointments[idx].date;
   store.appointments[idx] = {
     ...store.appointments[idx],
     ...updates,
     updatedAt: new Date().toISOString(),
   };
+
+  // If cancelled or rescheduled away from previousDate, automatically mark matching waitlist entries as slot_opened!
+  if (
+    updates.status === "cancelled" ||
+    (updates.date && updates.date !== previousDate)
+  ) {
+    for (const wl of store.waitlist) {
+      if (wl.preferredDate === previousDate && wl.status === "waiting") {
+        wl.status = "slot_opened";
+      }
+    }
+  }
+
   persistStore(store);
   return store.appointments[idx];
 }
@@ -281,6 +402,7 @@ export function saveSession(session: ConversationSession): void {
 export function resetDemoStore(): StoreData {
   const fresh: StoreData = {
     appointments: createSeedAppointments(),
+    waitlist: createSeedWaitlist(),
     sessions: {},
     initializedAt: new Date().toISOString(),
   };
@@ -294,6 +416,7 @@ export function resetDemoStore(): StoreData {
  */
 export function syncStoreFromClient(payload: {
   appointments?: Appointment[];
+  waitlist?: WaitlistEntry[];
   sessionId?: string;
   clientPhone?: string;
   history?: ConversationSession["history"];
@@ -303,6 +426,11 @@ export function syncStoreFromClient(payload: {
 
   if (Array.isArray(payload.appointments) && payload.appointments.length > 0) {
     store.appointments = payload.appointments;
+    mutated = true;
+  }
+
+  if (Array.isArray(payload.waitlist) && payload.waitlist.length > 0) {
+    store.waitlist = payload.waitlist;
     mutated = true;
   }
 

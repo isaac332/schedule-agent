@@ -8,10 +8,18 @@ import { formatLocalDate, getNextOpenStudioDates } from "@/lib/calendar/dateUtil
 import {
   createBookingRecord,
   getAllAppointments,
+  getAllWaitlistEntries,
   resetDemoStore,
   updateBookingRecord,
 } from "@/lib/storage/appointmentStore";
-import { STUDIO_HOURS, STUDIO_INFO, STUDIO_SERVICES } from "@/lib/studio/config";
+import {
+  STUDIO_ADDONS,
+  STUDIO_BACKDROPS,
+  STUDIO_HOURS,
+  STUDIO_INFO,
+  STUDIO_PHOTOGRAPHERS,
+  STUDIO_SERVICES,
+} from "@/lib/studio/config";
 import type { AppointmentStatus } from "@/lib/studio/types";
 
 export async function GET(request: Request) {
@@ -30,8 +38,12 @@ export async function GET(request: Request) {
   return Response.json({
     studio: STUDIO_INFO,
     services: STUDIO_SERVICES,
+    addOns: STUDIO_ADDONS,
+    photographers: STUDIO_PHOTOGRAPHERS,
+    backdrops: STUDIO_BACKDROPS,
     hours: STUDIO_HOURS,
     appointments: getAllAppointments(),
+    waitlist: getAllWaitlistEntries(),
     selectedDateAvailability: dayAvailability,
     weekAvailability,
     nextOpenDates: nextOpen,
@@ -93,6 +105,7 @@ export async function POST(request: Request) {
       success: true,
       appointment,
       appointments: getAllAppointments(),
+      waitlist: getAllWaitlistEntries(),
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
@@ -116,6 +129,7 @@ export async function PATCH(request: Request) {
       return Response.json({
         success: true,
         appointments: getAllAppointments(),
+        waitlist: getAllWaitlistEntries(),
       });
     }
 
@@ -147,6 +161,7 @@ export async function PATCH(request: Request) {
         success: true,
         appointment: updated,
         appointments: getAllAppointments(),
+        waitlist: getAllWaitlistEntries(),
       });
     }
 
@@ -162,6 +177,7 @@ export async function PATCH(request: Request) {
       success: true,
       appointment: updated,
       appointments: getAllAppointments(),
+      waitlist: getAllWaitlistEntries(),
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);

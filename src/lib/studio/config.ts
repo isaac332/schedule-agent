@@ -1,4 +1,9 @@
-import type { DaySchedule, StudioService } from "./types";
+import type {
+  DaySchedule,
+  StudioAddOn,
+  StudioPhotographer,
+  StudioService,
+} from "./types";
 
 export const STUDIO_INFO = {
   name: "Lumina Portrait & Creative Studio",
@@ -15,6 +20,80 @@ export const STUDIO_INFO = {
   wardrobeTips:
     "Solid mid-tones, textured knits, and layered neutrals photograph best under studio strobes. Avoid neon colors or micro-stripes.",
 };
+
+export const STUDIO_BACKDROPS = [
+  "Warm Bone Canvas (Hand-painted)",
+  "Charcoal Architectural Concrete",
+  "Terracotta Clay Seamless",
+  "Pure Cyclorama White Infinity Wall",
+  "Deep Olive Editorial Muslin",
+  "Natural Daylight Loft Brick & Industrial Windows",
+];
+
+export const STUDIO_PHOTOGRAPHERS: StudioPhotographer[] = [
+  {
+    id: "photo-elena",
+    name: "Elena Vance",
+    role: "Creative Director & Lead Editorial Photographer",
+    specialties: ["Signature Portrait", "Commercial & Brand", "Editorial"],
+    bio: "12+ years shooting magazine portraits and founder campaigns with dramatic Profoto strobe and daylight combinations.",
+    assignedRoom: "Suite A — Daylight Cyclorama Loft",
+  },
+  {
+    id: "photo-marcus",
+    name: "Marcus Chen",
+    role: "Senior Headshot & Commercial Specialist",
+    specialties: ["Express Headshot", "Commercial & Brand", "Executive Teams"],
+    bio: "Known for fast, relaxed expression coaching that makes camera-shy executives look confident in under 30 minutes.",
+    assignedRoom: "Suite B — Precision Strobe Portrait Studio",
+  },
+  {
+    id: "photo-sofia",
+    name: "Sofia Patel",
+    role: "Family, Maternity & Milestone Photographer",
+    specialties: ["Family & Maternity", "Graduation & Milestone", "Keepsake"],
+    bio: "Specializes in warm, candid family storytelling, maternity lighting, and senior milestone portraits.",
+    assignedRoom: "Suite A — Lifestyle & Courtyard Sets",
+  },
+];
+
+export const STUDIO_ADDONS: StudioAddOn[] = [
+  {
+    id: "hair-makeup",
+    name: "Professional Hair & Camera-Ready Makeup",
+    price: 125,
+    extraMinutes: 30,
+    description: "In-studio HMUA styling prior to camera time for flawless skin finish under studio strobes.",
+  },
+  {
+    id: "extra-retouch-5",
+    name: "5 Extra Magazine-Retouched Digitals",
+    price: 95,
+    extraMinutes: 0,
+    description: "Bundle of 5 additional high-resolution retouched images beyond your package allowance.",
+  },
+  {
+    id: "rush-delivery",
+    name: "24-Hour Express Final Retouch Delivery",
+    price: 85,
+    extraMinutes: 0,
+    description: "Priority overnight retouching turnaround for press deadlines, announcements, or LinkedIn launches.",
+  },
+  {
+    id: "wardrobe-styling",
+    name: "Wardrobe Steaming & Styling Concierge",
+    price: 60,
+    extraMinutes: 0,
+    description: "Garment steaming, lint prep, and guided outfit pairing for up to 4 looks.",
+  },
+  {
+    id: "bts-social-reel",
+    name: "Behind-the-Scenes 4K Vertical Social Reel",
+    price: 110,
+    extraMinutes: 0,
+    description: "Edited 30-second vertical 4K reel captured during your shoot for Instagram/TikTok/LinkedIn.",
+  },
+];
 
 export const STUDIO_SERVICES: StudioService[] = [
   {
@@ -122,10 +201,8 @@ export const STUDIO_HOURS: DaySchedule[] = [
 export function findStudioService(queryOrId: string): StudioService | undefined {
   if (!queryOrId) return undefined;
   const q = queryOrId.toLowerCase().trim();
-  // Exact ID match
   const exact = STUDIO_SERVICES.find((s) => s.id.toLowerCase() === q);
   if (exact) return exact;
-  // Substring match on id, name, shortName, or category
   return STUDIO_SERVICES.find(
     (s) =>
       s.id.toLowerCase().includes(q) ||
@@ -140,4 +217,55 @@ export function findStudioService(queryOrId: string): StudioService | undefined 
       ((q.includes("brand") || q.includes("commercial") || q.includes("product")) &&
         s.id === "commercial-brand"),
   );
+}
+
+export function findStudioAddOns(queries: string[] | string): StudioAddOn[] {
+  const rawList = Array.isArray(queries)
+    ? queries
+    : queries
+        .split(/[,;+]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+  const matched = new Map<string, StudioAddOn>();
+
+  for (const item of rawList) {
+    const q = item.toLowerCase();
+    for (const addon of STUDIO_ADDONS) {
+      if (
+        addon.id.toLowerCase() === q ||
+        addon.id.toLowerCase().includes(q) ||
+        addon.name.toLowerCase().includes(q) ||
+        ((q.includes("hair") || q.includes("makeup") || q.includes("hmua")) &&
+          addon.id === "hair-makeup") ||
+        ((q.includes("retouch") || q.includes("extra photo") || q.includes("extra digital")) &&
+          addon.id === "extra-retouch-5") ||
+        ((q.includes("rush") || q.includes("24") || q.includes("express")) &&
+          addon.id === "rush-delivery") ||
+        ((q.includes("wardrobe") || q.includes("steam") || q.includes("styling")) &&
+          addon.id === "wardrobe-styling") ||
+        ((q.includes("reel") || q.includes("bts") || q.includes("video") || q.includes("social")) &&
+          addon.id === "bts-social-reel")
+      ) {
+        matched.set(addon.id, addon);
+      }
+    }
+  }
+
+  return Array.from(matched.values());
+}
+
+export function findPhotographer(queryOrServiceId?: string): StudioPhotographer {
+  if (!queryOrServiceId) return STUDIO_PHOTOGRAPHERS[0];
+  const q = queryOrServiceId.toLowerCase();
+  const byName = STUDIO_PHOTOGRAPHERS.find(
+    (p) => p.id.toLowerCase() === q || p.name.toLowerCase().includes(q),
+  );
+  if (byName) return byName;
+
+  if (q.includes("headshot")) return STUDIO_PHOTOGRAPHERS[1]; // Marcus Chen
+  if (q.includes("family") || q.includes("maternity") || q.includes("grad")) {
+    return STUDIO_PHOTOGRAPHERS[2]; // Sofia Patel
+  }
+  return STUDIO_PHOTOGRAPHERS[0]; // Elena Vance
 }

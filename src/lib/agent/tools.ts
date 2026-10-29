@@ -1,6 +1,16 @@
 import { Type, type FunctionDeclaration, type Tool } from "@google/genai";
 import { createToolbox, type ToolFunctionsMap } from "@llm-multi-provider/core";
-import { STUDIO_HOURS, STUDIO_INFO, STUDIO_SERVICES, findStudioService } from "../studio/config";
+import {
+  STUDIO_ADDONS,
+  STUDIO_BACKDROPS,
+  STUDIO_HOURS,
+  STUDIO_INFO,
+  STUDIO_PHOTOGRAPHERS,
+  STUDIO_SERVICES,
+  findPhotographer,
+  findStudioAddOns,
+  findStudioService,
+} from "../studio/config";
 import {
   computeDayAvailability,
   computeRangeAvailability,
@@ -15,7 +25,9 @@ import {
 } from "../calendar/dateUtils";
 import {
   createBookingRecord,
+  createWaitlistRecord,
   findAppointmentByQuery,
+  getAllWaitlistEntries,
   getAppointmentsByDate,
   updateBookingRecord,
 } from "../storage/appointmentStore";
@@ -24,7 +36,7 @@ export const STUDIO_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   {
     name: "getStudioServices",
     description:
-      "Returns the photo studio's session packages, pricing, durations, deposit policies, operating hours, and studio address.",
+      "Returns the photo studio's session packages, pricing, durations, deposit policies, optional add-ons, operating hours, and studio address.",
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -92,6 +104,45 @@ export const STUDIO_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
     },
   },
   {
+    name: "calculateSessionQuote",
+    description:
+      "Calculates a customized itemized price and duration quote for a photography package combined with optional studio add-ons (hair & makeup, extra retouched photos, 24h rush delivery, wardrobe styling, or behind-the-scenes social reel).",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        serviceId: {
+          type: Type.STRING,
+          description:
+            "Package ID or name (e.g. 'headshot-express', 'portrait-signature', 'family-maternity', 'graduation-senior', 'commercial-brand').",
+        },
+        addOns: {
+          type: Type.STRING,
+          description:
+            "Comma-separated list of add-on IDs or names (e.g. 'hair-makeup, extra-retouch-5, rush-delivery, wardrobe-styling, bts-social-reel').",
+        },
+        participants: {
+          type: Type.NUMBER,
+          description: "Number of participants in the shoot (default 1).",
+        },
+      },
+    },
+  },
+  {
+    name: "getStudioTeamAndSpaces",
+    description:
+      "Retrieves details about the studio's photographers, their specialties, studio suites, lighting equipment, and available hand-painted & seamless backdrops.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        specialtyFilter: {
+          type: Type.STRING,
+          description:
+            "Optional filter by specialty or photographer name (e.g. 'Elena', 'Marcus', 'Sofia', 'headshot', 'family', 'editorial').",
+        },
+      },
+    },
+  },
+  {
     name: "bookAppointment",
     description:
       "Books and confirms a photo studio session for a client after verifying slot availability and collecting their contact details.",
@@ -127,6 +178,14 @@ export const STUDIO_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
           type: Type.NUMBER,
           description: "Number of people participating in the shoot (default 1).",
         },
+        photographerName: {
+          type: Type.STRING,
+          description: "Optional requested photographer (e.g. 'Elena Vance', 'Marcus Chen', 'Sofia Patel').",
+        },
+        addOns: {
+          type: Type.STRING,
+          description: "Optional comma-separated add-ons to include with the booking.",
+        },
         notes: {
           type: Type.STRING,
           description: "Optional notes, backdrop preferences, or special requests.",
@@ -148,6 +207,92 @@ export const STUDIO_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
         },
       },
       required: ["query"],
+    },
+  },
+  {
+    name: "updateAppointmentDetails",
+    description:
+      "Updates an existing appointment's notes, backdrop requests, participant count, assigned photographer, or add-on upgrades without changing its date/time.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        bookingRef: {
+          type: Type.STRING,
+          description: "Booking reference code (e.g. 'LUM-2041') or client name/phone.",
+        },
+        participants: {
+          type: Type.NUMBER,
+          description: "Updated number of participants.",
+        },
+        photographerName: {
+          type: Type.STRING,
+          description: "Requested photographer name (e.g. 'Elena Vance', 'Marcus Chen', 'Sofia Patel').",
+        },
+        addOns: {
+          type: Type.STRING,
+          description:
+            "Comma-separated add-on names or IDs to add to the booking (e.g. 'hair-makeup, rush-delivery').",
+        },
+        notes: {
+          type: Type.STRING,
+          description: "Updated session notes, wardrobe details, or backdrop color requests.",
+        },
+      },
+      required: ["bookingRef"],
+    },
+  },
+  {
+    name: "sendPrepGuideAndDepositLink",
+    description:
+      "Generates and sends a tailored pre-shoot preparation checklist, wardrobe guide, parking pass info, and deposit payment link for an existing booking.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        bookingRef: {
+          type: Type.STRING,
+          description: "Booking reference code (e.g. 'LUM-2041') or client name/phone.",
+        },
+      },
+      required: ["bookingRef"],
+    },
+  },
+  {
+    name: "joinWaitlist",
+    description:
+      "Adds a client to the studio's priority slot waitlist when their desired date or time window is currently booked.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        clientName: {
+          type: Type.STRING,
+          description: "Client's full name.",
+        },
+        clientPhone: {
+          type: Type.STRING,
+          description: "Client's phone number for instant SMS slot-opening alerts.",
+        },
+        clientEmail: {
+          type: Type.STRING,
+          description: "Client's email address.",
+        },
+        serviceId: {
+          type: Type.STRING,
+          description: "Desired photography package ID or name.",
+        },
+        preferredDate: {
+          type: Type.STRING,
+          description: "Preferred date in YYYY-MM-DD format.",
+        },
+        preferredTimeWindow: {
+          type: Type.STRING,
+          description: "Preferred time window (e.g. 'Morning 10:00 AM', 'Afternoon', 'Saturday morning').",
+        },
+        notes: {
+          type: Type.STRING,
+          description: "Optional waitlist notes.",
+        },
+      },
+      required: ["clientName", "preferredDate"],
     },
   },
   {
@@ -214,6 +359,7 @@ export function createStudioToolFunctions(defaultClientPhone?: string): ToolFunc
         ),
         closedDays: STUDIO_HOURS.filter((h) => !h.isOpen).map((h) => h.dayName),
         services: services.length > 0 ? services : STUDIO_SERVICES,
+        availableAddOns: STUDIO_ADDONS,
       };
     },
 
@@ -329,6 +475,83 @@ export function createStudioToolFunctions(defaultClientPhone?: string): ToolFunc
       };
     },
 
+    calculateSessionQuote: async (rawArgs: unknown) => {
+      const args = (rawArgs || {}) as {
+        serviceId?: string;
+        addOns?: string | string[];
+        participants?: number;
+      };
+
+      const service = findStudioService(args.serviceId || "") || STUDIO_SERVICES[1];
+      const matchedAddOns = args.addOns ? findStudioAddOns(args.addOns) : [];
+      const participants = typeof args.participants === "number" ? args.participants : 1;
+
+      const addOnsTotal = matchedAddOns.reduce((sum, a) => sum + a.price, 0);
+      const extraMinutes = matchedAddOns.reduce((sum, a) => sum + a.extraMinutes, 0);
+      const extraParticipantFee =
+        participants > service.maxParticipants
+          ? (participants - service.maxParticipants) * 35
+          : 0;
+
+      const totalPrice = service.price + addOnsTotal + extraParticipantFee;
+      const totalDurationMinutes = service.durationMinutes + extraMinutes;
+      const depositDueToday = service.depositAmount;
+      const balanceDueAtShoot = totalPrice - depositDueToday;
+
+      return {
+        package: {
+          id: service.id,
+          name: service.name,
+          basePrice: service.price,
+          baseDurationMinutes: service.durationMinutes,
+          maxIncludedParticipants: service.maxParticipants,
+        },
+        selectedAddOns: matchedAddOns.map((a) => ({
+          id: a.id,
+          name: a.name,
+          price: a.price,
+          extraMinutes: a.extraMinutes,
+        })),
+        participantsCount: participants,
+        extraParticipantFee,
+        quoteSummary: {
+          totalPrice: `$${totalPrice}`,
+          totalPriceNumeric: totalPrice,
+          depositRequiredToBook: `$${depositDueToday}`,
+          remainingBalanceAtSession: `$${balanceDueAtShoot}`,
+          estimatedTotalTimeMinutes: totalDurationMinutes,
+        },
+        allAvailableAddOnsCatalog: STUDIO_ADDONS,
+      };
+    },
+
+    getStudioTeamAndSpaces: async (rawArgs: unknown) => {
+      const args = (rawArgs || {}) as { specialtyFilter?: string };
+      const q = args.specialtyFilter?.toLowerCase().trim();
+
+      const photographers = q
+        ? STUDIO_PHOTOGRAPHERS.filter(
+            (p) =>
+              p.name.toLowerCase().includes(q) ||
+              p.role.toLowerCase().includes(q) ||
+              p.specialties.some((s) => s.toLowerCase().includes(q)),
+          )
+        : STUDIO_PHOTOGRAPHERS;
+
+      return {
+        studioName: STUDIO_INFO.name,
+        address: STUDIO_INFO.address,
+        photographers: photographers.length > 0 ? photographers : STUDIO_PHOTOGRAPHERS,
+        backdropsAvailable: STUDIO_BACKDROPS,
+        equipmentHighlights: [
+          "Profoto Pro-11 & B10X Plus Studio Strobes",
+          "18-ft Heated Infinity Cyclorama Wall",
+          "Capture One Live Wireless iPad Client Review",
+          "Full Garment Steamer, Changing Suite & Illuminated Vanity Station",
+        ],
+      };
+    },
+
     bookAppointment: async (rawArgs: unknown) => {
       const args = (rawArgs || {}) as {
         clientName?: string;
@@ -338,6 +561,8 @@ export function createStudioToolFunctions(defaultClientPhone?: string): ToolFunc
         date?: string;
         startTime?: string;
         participants?: number;
+        photographerName?: string;
+        addOns?: string;
         notes?: string;
       };
 
@@ -368,6 +593,12 @@ export function createStudioToolFunctions(defaultClientPhone?: string): ToolFunc
         };
       }
 
+      const matchedAddOns = args.addOns ? findStudioAddOns(args.addOns) : [];
+      const extraPrice = matchedAddOns.reduce((sum, a) => sum + a.price, 0);
+      const assignedPhotographer = findPhotographer(
+        args.photographerName || service.id,
+      ).name;
+
       const booked = createBookingRecord({
         clientName,
         clientPhone,
@@ -377,6 +608,9 @@ export function createStudioToolFunctions(defaultClientPhone?: string): ToolFunc
         startTime: validation.normalizedStart,
         endTime: validation.normalizedEnd,
         participants: args.participants || 1,
+        photographerName: assignedPhotographer,
+        addOns: matchedAddOns.map((a) => a.name),
+        extraPrice,
         notes: args.notes,
         source: "sms",
       });
@@ -390,6 +624,8 @@ export function createStudioToolFunctions(defaultClientPhone?: string): ToolFunc
           clientPhone: booked.clientPhone,
           clientEmail: booked.clientEmail,
           serviceName: booked.serviceName,
+          photographerName: booked.photographerName,
+          addOns: booked.addOns,
           date: booked.date,
           prettyDate: formatPrettyDate(booked.date),
           time: `${formatTime12h(booked.startTime)} – ${formatTime12h(booked.endTime)}`,
@@ -422,6 +658,10 @@ export function createStudioToolFunctions(defaultClientPhone?: string): ToolFunc
           clientEmail: m.clientEmail,
           serviceId: m.serviceId,
           serviceName: m.serviceName,
+          photographerName: m.photographerName,
+          addOns: m.addOns || [],
+          prepGuideSent: Boolean(m.prepGuideSent),
+          price: `$${m.price}`,
           date: m.date,
           prettyDate: formatPrettyDate(m.date),
           startTime: m.startTime,
@@ -430,6 +670,140 @@ export function createStudioToolFunctions(defaultClientPhone?: string): ToolFunc
           status: m.status,
           notes: m.notes,
         })),
+      };
+    },
+
+    updateAppointmentDetails: async (rawArgs: unknown) => {
+      const args = (rawArgs || {}) as {
+        bookingRef?: string;
+        participants?: number;
+        photographerName?: string;
+        addOns?: string;
+        notes?: string;
+      };
+
+      const ref = args.bookingRef?.trim() || "";
+      const existing = findAppointmentByQuery(ref)[0];
+      if (!existing) {
+        return {
+          success: false,
+          error: `Could not find an appointment matching "${ref}".`,
+        };
+      }
+
+      const service =
+        STUDIO_SERVICES.find((s) => s.id === existing.serviceId) || STUDIO_SERVICES[0];
+
+      const newAddOns = args.addOns
+        ? Array.from(
+            new Set([
+              ...(existing.addOns || []),
+              ...findStudioAddOns(args.addOns).map((a) => a.name),
+            ]),
+          )
+        : existing.addOns || [];
+
+      const addOnsObjects = findStudioAddOns(newAddOns);
+      const addOnsPrice = addOnsObjects.reduce((sum, a) => sum + a.price, 0);
+      const newPrice = service.price + addOnsPrice;
+
+      const updatedPhotographer = args.photographerName
+        ? findPhotographer(args.photographerName).name
+        : existing.photographerName;
+
+      const updatedNotes = args.notes
+        ? existing.notes
+          ? `${existing.notes} | ${args.notes.trim()}`
+          : args.notes.trim()
+        : existing.notes;
+
+      const updated = updateBookingRecord(existing.bookingRef, {
+        participants:
+          typeof args.participants === "number"
+            ? args.participants
+            : existing.participants,
+        photographerName: updatedPhotographer,
+        addOns: newAddOns,
+        price: newPrice,
+        notes: updatedNotes,
+      });
+
+      return {
+        success: true,
+        message: `Updated booking ${existing.bookingRef} for ${existing.clientName}.`,
+        appointment: updated,
+      };
+    },
+
+    sendPrepGuideAndDepositLink: async (rawArgs: unknown) => {
+      const args = (rawArgs || {}) as { bookingRef?: string };
+      const ref = args.bookingRef?.trim() || "";
+      const existing = findAppointmentByQuery(ref)[0];
+
+      if (!existing) {
+        return {
+          success: false,
+          error: `Could not find booking matching "${ref}".`,
+        };
+      }
+
+      const service =
+        STUDIO_SERVICES.find((s) => s.id === existing.serviceId) || STUDIO_SERVICES[0];
+
+      const updated = updateBookingRecord(existing.bookingRef, {
+        prepGuideSent: true,
+      });
+
+      return {
+        success: true,
+        bookingRef: existing.bookingRef,
+        clientName: existing.clientName,
+        clientEmail: existing.clientEmail,
+        depositAmount: `$${service.depositAmount}`,
+        totalPrice: `$${existing.price}`,
+        depositPaymentUrl: `https://pay.luminastudio.co/deposit/${existing.bookingRef}`,
+        prepChecklist: [
+          `Arrive 10 minutes before your ${formatTime12h(existing.startTime)} start time at ${STUDIO_INFO.address}.`,
+          STUDIO_INFO.parkingInfo,
+          STUDIO_INFO.wardrobeTips,
+          "Bring 2–3 pressed outfit options on hangers; our studio steamer is ready for you.",
+        ],
+        appointment: updated,
+      };
+    },
+
+    joinWaitlist: async (rawArgs: unknown) => {
+      const args = (rawArgs || {}) as {
+        clientName?: string;
+        clientPhone?: string;
+        clientEmail?: string;
+        serviceId?: string;
+        preferredDate?: string;
+        preferredTimeWindow?: string;
+        notes?: string;
+      };
+
+      const todayStr = formatLocalDate(new Date());
+      const openDates = getNextOpenStudioDates(todayStr, 3);
+      const service = findStudioService(args.serviceId || "") || STUDIO_SERVICES[0];
+
+      const entry = createWaitlistRecord({
+        clientName: args.clientName?.trim() || "Valued Client",
+        clientPhone: args.clientPhone?.trim() || defaultClientPhone || "(555) 019-2834",
+        clientEmail: args.clientEmail?.trim() || "client@example.com",
+        serviceId: service.id,
+        preferredDate:
+          args.preferredDate && /^\d{4}-\d{2}-\d{2}$/.test(args.preferredDate.trim())
+            ? args.preferredDate.trim()
+            : openDates[0] || todayStr,
+        preferredTimeWindow: args.preferredTimeWindow?.trim() || "First available slot",
+        notes: args.notes,
+      });
+
+      return {
+        success: true,
+        message: `Added ${entry.clientName} to the priority waitlist (${entry.waitlistRef}) for ${formatPrettyDate(entry.preferredDate)}.`,
+        waitlistEntry: entry,
       };
     },
 
@@ -520,10 +894,19 @@ export function createStudioToolFunctions(defaultClientPhone?: string): ToolFunc
           : existing.notes,
       });
 
+      const openedWaitlist = getAllWaitlistEntries().filter(
+        (w) => w.preferredDate === existing.date && w.status === "slot_opened",
+      );
+
       return {
         success: true,
         message: `Appointment ${existing.bookingRef} for ${existing.clientName} on ${formatPrettyDate(existing.date)} at ${formatTime12h(existing.startTime)} has been cancelled.`,
         appointment: updated,
+        waitlistAutoNotified: openedWaitlist.map((w) => ({
+          waitlistRef: w.waitlistRef,
+          clientName: w.clientName,
+          preferredTimeWindow: w.preferredTimeWindow,
+        })),
       };
     },
   };

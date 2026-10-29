@@ -7,7 +7,17 @@ import {
   type LLMProviderId,
   type StandardMessage,
 } from "@llm-multi-provider/core";
-import { STUDIO_HOURS, STUDIO_INFO, STUDIO_SERVICES, findStudioService } from "../studio/config";
+import {
+  STUDIO_ADDONS,
+  STUDIO_BACKDROPS,
+  STUDIO_HOURS,
+  STUDIO_INFO,
+  STUDIO_PHOTOGRAPHERS,
+  STUDIO_SERVICES,
+  findPhotographer,
+  findStudioAddOns,
+  findStudioService,
+} from "../studio/config";
 import type {
   ProviderMode,
   ProviderTelemetry,
@@ -42,6 +52,15 @@ export function buildSystemPrompt(clientPhone: string): string {
       `- ${s.name} (id: "${s.id}"): ${s.durationMinutes} mins | $${s.price} ($${s.depositAmount} deposit) | Max ${s.maxParticipants} person(s)`,
   ).join("\n  ");
 
+  const addOnsSummary = STUDIO_ADDONS.map(
+    (a) =>
+      `- ${a.name} (id: "${a.id}"): +$${a.price}${a.extraMinutes > 0 ? ` (+${a.extraMinutes}m)` : ""} — ${a.description}`,
+  ).join("\n  ");
+
+  const photographersSummary = STUDIO_PHOTOGRAPHERS.map(
+    (p) => `- ${p.name} (${p.role}, ${p.assignedRoom}): Specialties: ${p.specialties.join(", ")}`,
+  ).join("\n  ");
+
   const hoursSummary = STUDIO_HOURS.map((h) =>
     h.isOpen
       ? `${h.dayName}: ${formatTime12h(h.openTime)} – ${formatTime12h(h.closeTime)}`
@@ -49,7 +68,7 @@ export function buildSystemPrompt(clientPhone: string): string {
   ).join(" | ");
 
   return `You are ${STUDIO_INFO.coordinatorName}, the AI Studio Booking Coordinator for ${STUDIO_INFO.name}.
-You communicate with clients via SMS / text messaging to answer questions, check studio availability, and book, reschedule, or cancel photography appointments.
+You communicate with clients via SMS / text messaging to answer questions, check studio availability, calculate itemized quotes, recommend photographers/backdrops, send pre-shoot prep guides & deposit links, manage the priority waitlist, and book, update, reschedule, or cancel photography appointments.
 
 CURRENT DATE CONTEXT:
 - Today's Date: ${todayStr} (${formatPrettyDate(todayStr)})
@@ -69,16 +88,30 @@ STUDIO DETAILS:
 PHOTOGRAPHY PACKAGES:
   ${servicesSummary}
 
+OPTIONAL STUDIO ADD-ONS:
+  ${addOnsSummary}
+
+STUDIO PHOTOGRAPHERS & SUITES:
+  ${photographersSummary}
+
+AVAILABLE BACKDROPS:
+  - ${STUDIO_BACKDROPS.join("\n  - ")}
+
 STRICT OPERATING RULES:
 1. ALWAYS use \`checkAvailableBookings\` or \`getAvailableSlots\` to retrieve real-time calendar availability before quoting any open appointment times. Never guess, invent, or assume availability.
-2. Keep responses warm, concise, and SMS-friendly (2–4 short paragraphs max, using clear bullet points for time slots).
-3. To complete a booking with \`bookAppointment\`, make sure you have:
+2. Use \`calculateSessionQuote\` whenever a client asks for a price estimate involving add-ons (like hair & makeup, extra retouched photos, rush delivery, styling, or reels) or extra participants.
+3. Use \`getStudioTeamAndSpaces\` when a client asks about photographers, studio rooms, lighting gear, or backdrops.
+4. Use \`updateAppointmentDetails\` when a client wants to add an upgrade/add-on, assign a preferred photographer, update participant count, or add special notes to an existing booking.
+5. Use \`sendPrepGuideAndDepositLink\` when a client asks for a pre-shoot prep guide, wardrobe checklist, parking instructions, or deposit payment link for their booking.
+6. Use \`joinWaitlist\` when a client's preferred date/time is booked or they ask to be notified if a slot opens up.
+7. Keep responses warm, concise, and SMS-friendly (2–4 short paragraphs max, using clear bullet points).
+8. To complete a booking with \`bookAppointment\`, make sure you have:
    - Session type (\`serviceId\`)
    - Date (\`YYYY-MM-DD\`) and start time (\`HH:mm\`)
    - Client's full name (\`clientName\`) and email (\`clientEmail\`)
    - Client's phone number (\`clientPhone\` — default to ${clientPhone} if they are texting from it and haven't given another)
-4. When a booking succeeds, always include the Booking Reference Code (e.g. \`LUM-xxxx\`), date/time, package name, and studio address.
-5. For rescheduling or cancelling, use \`getAppointment\` first if the client didn't provide their \`LUM-xxxx\` booking reference.`;
+9. When a booking succeeds, always include the Booking Reference Code (e.g. \`LUM-xxxx\`), date/time, package name, and studio address.
+10. For rescheduling, updating, or cancelling, use \`getAppointment\` first if the client didn't provide their \`LUM-xxxx\` booking reference.`;
 }
 
 export function resolveProviderSetup(config?: RuntimeProviderConfig): {
@@ -241,8 +274,12 @@ async function runSmartLocalDemoCoordinator(
         reason: "Client requested cancellation via SMS",
       });
       if (cancelled.success) {
+        const waitlistNote =
+          cancelled.waitlistAutoNotified?.length > 0
+            ? `\n\n🔔 We also automatically notified ${cancelled.waitlistAutoNotified.length} waitlisted client(s) (${cancelled.waitlistAutoNotified.map((w: { clientName: string }) => w.clientName).join(", ")}) that this slot opened up.`
+            : "";
         return {
-          reply: `Got it! I've cancelled your ${target.serviceName} appointment (${target.bookingRef}) scheduled for ${target.prettyDate} at ${target.timeLabel}. Your slot has been released. Let me know anytime you'd like to book a new shoot!`,
+          reply: `Got it! I've cancelled your ${target.serviceName} appointment (${target.bookingRef}) scheduled for ${target.prettyDate} at ${target.timeLabel}. Your slot has been released.${waitlistNote} Let me know anytime you'd like to book a new shoot!`,
           toolExecutions,
         };
       }
@@ -275,6 +312,153 @@ async function runSmartLocalDemoCoordinator(
           toolExecutions,
         };
       }
+    }
+  }
+
+  // 2b. Check for Prep Guide & Deposit Link intent
+  if (
+    lower.includes("prep") ||
+    lower.includes("checklist") ||
+    lower.includes("what to wear") ||
+    lower.includes("wardrobe") ||
+    lower.includes("deposit link")
+  ) {
+    const targetRef = refMatch ? refMatch[1].toUpperCase() : "LUM-2055";
+    const prep = await callTool("sendPrepGuideAndDepositLink", { bookingRef: targetRef });
+    if (prep.success) {
+      const checklistBullets = (prep.prepChecklist || [])
+        .slice(0, 3)
+        .map((c: string) => `• ${c}`)
+        .join("\n");
+      return {
+        reply: `I've dispatched the **Prep Guide & Deposit Link** for **${prep.bookingRef}** (${prep.clientName})! 📋✨\n\n**Key Prep Tips:**\n${checklistBullets}\n\n💳 **Deposit Link (${prep.depositAmount}):** ${prep.depositPaymentUrl}`,
+        toolExecutions,
+      };
+    }
+  }
+
+  // 2c. Check for Update Existing Appointment Details (add-ons, photographer, notes)
+  if (
+    refMatch &&
+    (lower.includes("add ") ||
+      lower.includes("upgrade") ||
+      lower.includes("update") ||
+      lower.includes("backdrop") ||
+      lower.includes("photographer") ||
+      lower.includes("retouch") ||
+      lower.includes("makeup") ||
+      lower.includes("rush"))
+  ) {
+    const bookingRef = refMatch[1].toUpperCase();
+    const matchedAddOns = findStudioAddOns(userMessage).map((a) => a.id).join(",");
+    const matchedPhotog = findPhotographer(userMessage);
+    const updated = await callTool("updateAppointmentDetails", {
+      bookingRef,
+      addOns: matchedAddOns || undefined,
+      photographerName: matchedPhotog?.name,
+      notes: userMessage,
+    });
+    if (updated.success && updated.appointment) {
+      const apt = updated.appointment;
+      return {
+        reply: `Updated booking **${apt.bookingRef}** (${apt.serviceName})! ✨\n• **Photographer**: ${apt.photographerName}\n• **Add-Ons**: ${(apt.addOns || []).join(", ") || "None"}\n• **Updated Total**: $${apt.price}\n• **Notes**: ${apt.notes}`,
+        toolExecutions,
+      };
+    }
+  }
+
+  // 2d. Check for Custom Quote + Add-Ons intent
+  if (
+    lower.includes("quote") ||
+    lower.includes("estimate") ||
+    lower.includes("add-on") ||
+    lower.includes("addon") ||
+    lower.includes("hair") ||
+    lower.includes("makeup") ||
+    lower.includes("rush") ||
+    lower.includes("reel")
+  ) {
+    const svc = findStudioService(userMessage) || STUDIO_SERVICES[1];
+    const addOns = findStudioAddOns(userMessage);
+    const addOnsStr =
+      addOns.length > 0 ? addOns.map((a) => a.id).join(",") : "hair-makeup,rush-delivery";
+    const quoteRes = await callTool("calculateSessionQuote", {
+      serviceId: svc.id,
+      addOns: addOnsStr,
+      participants: 1,
+    });
+    if (quoteRes.quoteSummary) {
+      const addonLines = (quoteRes.selectedAddOns || [])
+        .map((a: { name: string; price: number }) => `• +$${a.price} — ${a.name}`)
+        .join("\n");
+      return {
+        reply: `Here is your itemized studio quote for the **${quoteRes.package.name}**:\n\n• **Base Package**: $${quoteRes.package.basePrice} (${quoteRes.package.baseDurationMinutes} mins)\n${addonLines}\n\n💰 **Estimated Total**: **${quoteRes.quoteSummary.totalPrice}** (${quoteRes.quoteSummary.estimatedTotalTimeMinutes} mins total)\n• **Deposit Due to Book**: ${quoteRes.quoteSummary.depositRequiredToBook}\n• **Balance Due at Shoot**: ${quoteRes.quoteSummary.remainingBalanceAtSession}\n\nWould you like me to check open dates for this setup?`,
+        toolExecutions,
+      };
+    }
+  }
+
+  // 2e. Check for Studio Team, Photographers, Backdrops, or Lighting Gear intent
+  if (
+    lower.includes("photographer") ||
+    lower.includes("who shoots") ||
+    lower.includes("team") ||
+    lower.includes("backdrop") ||
+    lower.includes("equipment") ||
+    lower.includes("lighting") ||
+    lower.includes("elena") ||
+    lower.includes("marcus") ||
+    lower.includes("sofia")
+  ) {
+    const teamData = await callTool("getStudioTeamAndSpaces", {});
+    const photogBullets = (teamData.photographers || [])
+      .map(
+        (p: { name: string; role: string; assignedRoom: string; specialties: string[] }) =>
+          `• **${p.name}** (${p.role} • ${p.assignedRoom}) — *${p.specialties.join(", ")}*`,
+      )
+      .join("\n");
+    const backdropSample = (teamData.backdropsAvailable || []).slice(0, 4).join(", ");
+    return {
+      reply: `Meet our creative team and studio spaces at **${STUDIO_INFO.name}**:\n\n${photogBullets}\n\n🎨 **Available Backdrops**: ${backdropSample}\n\nYou can request any photographer or backdrop when booking!`,
+      toolExecutions,
+    };
+  }
+
+  // 2f. Check for Priority Waitlist intent
+  if (
+    lower.includes("waitlist") ||
+    lower.includes("wait list") ||
+    lower.includes("notify me if") ||
+    lower.includes("if a slot opens")
+  ) {
+    const svc = findStudioService(userMessage) || STUDIO_SERVICES[0];
+    const emailMatchWl = userMessage.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+    const dateMatchWl = userMessage.match(/\b(202\d-\d{2}-\d{2})\b/);
+    let clientName = "Alex Kim";
+    const nameMatch =
+      userMessage.match(/(?:name is|for|i'm|i am)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
+    if (nameMatch?.[1]) {
+      clientName = nameMatch[1].trim();
+    }
+    const wlRes = await callTool("joinWaitlist", {
+      clientName,
+      clientPhone,
+      clientEmail: emailMatchWl ? emailMatchWl[1] : "alex@kim.co",
+      serviceId: svc.id,
+      preferredDate: dateMatchWl ? dateMatchWl[1] : openDates[0],
+      preferredTimeWindow: lower.includes("morning")
+        ? "Morning (9 AM - 12 PM)"
+        : lower.includes("afternoon")
+          ? "Afternoon (12 PM - 4 PM)"
+          : "Anytime",
+      notes: "Requested via SMS Schedule Agent",
+    });
+    if (wlRes.success) {
+      const w = wlRes.waitlistEntry;
+      return {
+        reply: `You're on our Priority Waitlist! 🔔\n\n• **Waitlist Ref**: ${w.waitlistRef}\n• **Session**: ${w.serviceName}\n• **Preferred Date**: ${formatPrettyDate(w.preferredDate)} (${w.preferredTimeWindow})\n• **Client**: ${w.clientName}\n\nIf a slot opens up on ${formatPrettyDate(w.preferredDate)}, we'll text you immediately with a 1-tap booking link!`,
+        toolExecutions,
+      };
     }
   }
 

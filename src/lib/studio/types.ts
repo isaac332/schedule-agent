@@ -19,6 +19,38 @@ export interface StudioService {
   category: "portrait" | "family" | "milestone" | "commercial";
 }
 
+export interface StudioAddOn {
+  id: string;
+  name: string;
+  price: number;
+  extraMinutes: number;
+  description: string;
+}
+
+export interface StudioPhotographer {
+  id: string;
+  name: string;
+  role: string;
+  specialties: string[];
+  bio: string;
+  assignedRoom: string;
+}
+
+export interface WaitlistEntry {
+  id: string;
+  waitlistRef: string;
+  clientName: string;
+  clientPhone: string;
+  clientEmail: string;
+  serviceId: string;
+  serviceName: string;
+  preferredDate: string;
+  preferredTimeWindow: string;
+  notes?: string;
+  status: "waiting" | "slot_opened" | "booked";
+  createdAt: string;
+}
+
 export interface DaySchedule {
   dayOfWeek: number; // 0 = Sunday ... 6 = Saturday
   dayName: string;
@@ -43,6 +75,9 @@ export interface Appointment {
   durationMinutes: number;
   price: number;
   participants: number;
+  photographerName?: string;
+  addOns?: string[];
+  prepGuideSent?: boolean;
   notes?: string;
   status: AppointmentStatus;
   createdAt: string;

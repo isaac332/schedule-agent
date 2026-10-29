@@ -6,12 +6,18 @@ import {
 } from "@/lib/agent/scheduleAgent";
 import {
   getAllAppointments,
+  getAllWaitlistEntries,
   getOrCreateSession,
   saveSession,
   syncStoreFromClient,
 } from "@/lib/storage/appointmentStore";
 import { STUDIO_HOURS, STUDIO_INFO, STUDIO_SERVICES } from "@/lib/studio/config";
-import type { Appointment, ChatTurnMessage, ConversationSession } from "@/lib/studio/types";
+import type {
+  Appointment,
+  ChatTurnMessage,
+  ConversationSession,
+  WaitlistEntry,
+} from "@/lib/studio/types";
 
 export async function GET() {
   await connection();
@@ -38,6 +44,7 @@ export async function POST(request: Request) {
       providerConfig?: RuntimeProviderConfig;
       resetSession?: boolean;
       clientAppointments?: Appointment[];
+      clientWaitlist?: WaitlistEntry[];
       clientHistory?: ConversationSession["history"];
     };
 
@@ -47,6 +54,7 @@ export async function POST(request: Request) {
     if (!body.resetSession) {
       syncStoreFromClient({
         appointments: body.clientAppointments,
+        waitlist: body.clientWaitlist,
         sessionId,
         clientPhone,
         history: body.clientHistory,
@@ -64,6 +72,7 @@ export async function POST(request: Request) {
         session,
         history: [],
         appointments: getAllAppointments(),
+        waitlist: getAllWaitlistEntries(),
       });
     }
 
@@ -109,6 +118,7 @@ export async function POST(request: Request) {
       telemetry: result.telemetry,
       history: session.history,
       appointments: getAllAppointments(),
+      waitlist: getAllWaitlistEntries(),
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
