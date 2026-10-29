@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #090a0f;
-  --foreground: #f4f4f6;
+  --background: #08090d;
+  --foreground: #f8fafc;
+  --accent-gold: #f59e0b;
 }
 
 @theme inline {
@@ -16,51 +17,115 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  min-block-size: 100dvh;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* --- Responsive Fluid Typography (responsive-design) --- */
+.studio-hero-title {
+  font-size: clamp(1rem, 0.85rem + 0.65vw, 1.35rem);
+  line-height: 1.2;
+}
+
+.studio-kpi-value {
+  font-size: clamp(1.25rem, 1rem + 1.1vw, 1.75rem);
+  line-height: 1.15;
+}
+
+/* --- Hide Scrollbar for Horizontal Touch Rails --- */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* --- Size-Aware Studio Cards (size-aware-styling & card) --- */
+.kpi-card-container,
+.slot-grid-container,
+.booking-card-container {
+  container-type: inline-size;
+}
+
+/* Default safe stacked layout for narrow containers */
+.booking-item-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Fallback using media queries for older browsers (size-aware-styling) */
+@media (min-width: 640px) {
+  .booking-item-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+/* Overwrite with container queries where supported (size-aware-styling) */
+@supports (container-type: inline-size) {
+  @media (min-width: 640px) {
+    .booking-item-card {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+
+  @container (min-width: 480px) {
+    .booking-item-card {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+  }
 }
 
 /* --- Light-Dismiss Modal Dialog Backdrop (light-dismiss-a-dialog) --- */
 dialog::backdrop {
-  background-color: rgba(4, 6, 14, 0.72);
-  backdrop-filter: blur(4px);
+  background-color: rgba(4, 6, 14, 0.78);
+  backdrop-filter: blur(8px);
 }
 
 /* --- Responsive Data Table with Container Queries & Sticky Headers (responsive-table) --- */
 .table-wrapper {
   overflow: auto;
   max-inline-size: 100%;
-  max-block-size: min(460px, 72vh);
+  max-block-size: min(520px, 70dvh);
   container-type: inline-size;
-  border-radius: 0.75rem;
+  border-radius: 1rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(17, 19, 28, 0.75);
+  background: rgba(14, 17, 26, 0.85);
 }
 
 .studio-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  --label-2: "Session Package";
-  --label-3: "Date & Time";
+  --label-2: "Package";
+  --label-3: "Schedule";
   --label-4: "Contact";
   --label-5: "Status";
-  --label-6: "Actions";
+  --label-6: "Action";
 }
 
 .studio-table thead {
   position: sticky;
   inset-block-start: 0;
   z-index: 2;
-  background: #141722;
+  background: #131724;
 }
 
 .studio-table tbody th {
   position: sticky;
   inset-inline-start: 0;
   z-index: 1;
-  background: #121520;
+  background: #101420;
 }
 
-@container (width < 600px) {
+@container (width < 640px) {
   .studio-table,
   .studio-table thead,
   .studio-table tbody,
@@ -75,43 +140,59 @@ dialog::backdrop {
   }
 
   .studio-table tr {
-    margin-block-end: 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 0.75rem;
+    margin: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.875rem;
+    background: #131724;
     overflow: hidden;
+    box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.4);
   }
 
   .studio-table tbody th {
-    position: sticky;
-    inset-block-start: 0;
-    z-index: 2;
-    background: #1c2030;
+    position: relative;
+    inset: auto;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 0.75rem 1rem;
+  }
+
+  .studio-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    text-align: right;
+  }
+
+  .studio-table td:nth-child(2)::before,
+  .studio-table td:nth-child(3)::before,
+  .studio-table td:nth-child(4)::before,
+  .studio-table td:nth-child(5)::before,
+  .studio-table td:nth-child(6)::before {
+    font-weight: 600;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    text-align: left;
+    flex-shrink: 0;
   }
 
   .studio-table td:nth-child(2)::before {
-    content: var(--label-2) ": ";
-    font-weight: 600;
-    color: #94a3b8;
+    content: var(--label-2);
   }
   .studio-table td:nth-child(3)::before {
-    content: var(--label-3) ": ";
-    font-weight: 600;
-    color: #94a3b8;
+    content: var(--label-3);
   }
   .studio-table td:nth-child(4)::before {
-    content: var(--label-4) ": ";
-    font-weight: 600;
-    color: #94a3b8;
+    content: var(--label-4);
   }
   .studio-table td:nth-child(5)::before {
-    content: var(--label-5) ": ";
-    font-weight: 600;
-    color: #94a3b8;
+    content: var(--label-5);
   }
   .studio-table td:nth-child(6)::before {
-    content: var(--label-6) ": ";
-    font-weight: 600;
-    color: #94a3b8;
+    content: var(--label-6);
   }
 }
 
@@ -119,14 +200,14 @@ dialog::backdrop {
 .field-hint {
   display: block;
   color: #94a3b8;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   margin-bottom: 0.25rem;
 }
 
 .error-msg {
   display: none;
   color: #f87171;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   margin-top: 0.3rem;
 }
 
