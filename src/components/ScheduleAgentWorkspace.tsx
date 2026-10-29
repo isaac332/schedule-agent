@@ -498,20 +498,20 @@ export function ScheduleAgentWorkspace() {
       <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-[#0b0d14]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3.5 py-2.5 sm:px-6 sm:py-3">
           {/* Brand Identity */}
-          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 text-slate-950 shadow-lg shadow-amber-500/20 sm:h-10 sm:w-10">
               <Camera className="h-4 w-4 stroke-[2.25] sm:h-5 sm:w-5" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="studio-hero-title truncate font-bold tracking-tight text-white">
+                <h1 className="studio-hero-title whitespace-nowrap font-bold tracking-tight text-white">
                   Lumina Studio
                 </h1>
                 <span className="hidden rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-amber-300 sm:inline-block">
                   AI SMS Coordinator
                 </span>
               </div>
-              <p className="truncate text-[11px] text-slate-400">
+              <p className="hidden truncate text-[11px] text-slate-400 sm:block">
                 Portrait &amp; Editorial Booking Agent • 11 Live Tools
               </p>
             </div>
@@ -554,9 +554,7 @@ export function ScheduleAgentWorkspace() {
               title="Configure LLM Provider & API Keys"
             >
               <KeyRound className="h-3.5 w-3.5 text-amber-400" />
-              <span className="text-[11px] font-semibold md:hidden">
-                {PROVIDER_MODE_LABELS[providerMode].shortBadge}
-              </span>
+              <span className="text-[11px] font-semibold md:hidden">Models</span>
               <span className="hidden md:inline">Models &amp; Keys</span>
               <span
                 className={`h-2 w-2 rounded-full ${
@@ -869,14 +867,14 @@ export function ScheduleAgentWorkspace() {
             </div>
 
             {/* Desktop Sub-Navigation Filter Pill Bar (keeps desktop uncluttered too) */}
-            <div className="hidden items-center justify-between rounded-2xl border border-white/[0.08] bg-[#10131f] p-1.5 lg:flex">
+            <div className="hidden items-center justify-between gap-2 rounded-2xl border border-white/[0.08] bg-[#10131f] p-1.5 lg:flex">
               <div className="flex items-center gap-1">
                 {(
                   [
-                    { id: "all", label: "All Studio Views", icon: Layers },
+                    { id: "all", label: "All Views", icon: Layers },
                     {
                       id: "calendar",
-                      label: `Slot Explorer (${dayAvailability?.availableSlots.length ?? 0} Open)`,
+                      label: `Live Slots (${dayAvailability?.availableSlots.length ?? 0})`,
                       icon: Calendar,
                     },
                     {
@@ -898,20 +896,20 @@ export function ScheduleAgentWorkspace() {
                       key={tab.id}
                       type="button"
                       onClick={() => setStudioPanelTab(tab.id)}
-                      className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition ${
                         active
                           ? "bg-amber-500 text-slate-950 shadow-sm"
                           : "text-slate-300 hover:bg-white/5 hover:text-white"
                       }`}
                     >
-                      <Icon className="h-3.5 w-3.5" />
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
                       <span>{tab.label}</span>
                     </button>
                   );
                 })}
               </div>
 
-              <span className="pr-2 text-[11px] text-slate-400">
+              <span className="hidden truncate pr-2 text-[11px] text-slate-400 xl:inline">
                 {lastTelemetry
                   ? `${lastTelemetry.activeProvider} (${lastTelemetry.latencyMs}ms)`
                   : PROVIDER_MODE_LABELS[providerMode].badge}
