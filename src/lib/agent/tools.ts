@@ -11,10 +11,12 @@ import {
   formatPrettyDate,
   formatTime12h,
   getNextOpenStudioDates,
+  timeToMinutes,
 } from "../calendar/dateUtils";
 import {
   createBookingRecord,
   findAppointmentByQuery,
+  getAppointmentsByDate,
   updateBookingRecord,
 } from "../storage/appointmentStore";
 
@@ -44,7 +46,7 @@ export const STUDIO_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
         date: {
           type: Type.STRING,
           description:
-            "Start date to check in YYYY-MM-DD format. If omitted, defaults to today's date.",
+            "Start date to check in YYYY-MM-DD format. If omitted, defaults to the next open studio date.",
         },
         daysCount: {
           type: Type.NUMBER,
@@ -57,7 +59,36 @@ export const STUDIO_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
             "Service ID or name (e.g. 'headshot-express', 'portrait-signature', 'family-maternity', 'graduation-senior', 'commercial-brand').",
         },
       },
-      required: ["date"],
+    },
+  },
+  {
+    name: "checkAvailableBookings",
+    description:
+      "Checks the studio calendar and retrieves all available booking times for photo shoots. Use this whenever the client asks what's available, wants to see open times, or checks availability for a date or session type.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        date: {
+          type: Type.STRING,
+          description:
+            "Date to check in YYYY-MM-DD format (e.g. '2026-10-30'). Defaults to the earliest open studio date if omitted.",
+        },
+        daysCount: {
+          type: Type.NUMBER,
+          description:
+            "Number of upcoming studio days to retrieve (1 to 7). Default is 3.",
+        },
+        serviceId: {
+          type: Type.STRING,
+          description:
+            "Photography package ID or name (e.g. 'headshot-express', 'portrait-signature', 'family-maternity', 'graduation-senior', 'commercial-brand'). If omitted, defaults to express headshot.",
+        },
+        timeOfDay: {
+          type: Type.STRING,
+          description:
+            "Optional filter for time of day: 'morning' (9 AM–12 PM), 'afternoon' (12 PM–4 PM), 'late' (4 PM–6 PM), or 'any'.",
+        },
+      },
     },
   },
   {
@@ -192,10 +223,12 @@ export function createStudioToolFunctions(defaultClientPhone?: string): ToolFunc
         daysCount?: number;
         serviceId?: string;
       };
+      const todayStr = formatLocalDate(new Date());
+      const nextOpen = getNextOpenStudioDates(todayStr, 1);
       const startDate =
         args.date && /^\d{4}-\d{2}-\d{2}$/.test(args.date.trim())
           ? args.date.trim()
-          : formatLocalDate(new Date());
+          : nextOpen[0] || todayStr;
       const daysCount = typeof args.daysCount === "number" ? args.daysCount : 3;
       const service = findStudioService(args.serviceId || "") || STUDIO_SERVICES[1];
 
@@ -222,6 +255,76 @@ export function createStudioToolFunctions(defaultClientPhone?: string): ToolFunc
             label: s.label,
           })),
         })),
+        nextOpenStudioDates: nextOpenDates,
+      };
+    },
+
+    checkAvailableBookings: async (rawArgs: unknown) => {
+      const args = (rawArgs || {}) as {
+        date?: string;
+        daysCount?: number;
+        serviceId?: string;
+        timeOfDay?: string;
+      };
+
+      const todayStr = formatLocalDate(new Date());
+      const nextOpenDates = getNextOpenStudioDates(todayStr, 7);
+      const startDate =
+        args.date && /^\d{4}-\d{2}-\d{2}$/.test(args.date.trim())
+          ? args.date.trim()
+          : nextOpenDates[0] || todayStr;
+
+      const daysCount = Math.min(
+        Math.max(typeof args.daysCount === "number" ? args.daysCount : 3, 1),
+        7,
+      );
+      const service = findStudioService(args.serviceId || "") || STUDIO_SERVICES[0];
+      const range = computeRangeAvailability(startDate, daysCount, service.id);
+      const timeFilter = args.timeOfDay?.toLowerCase().trim();
+
+      const days = range.map((day) => {
+        const existingBookings = getAppointmentsByDate(day.date);
+        let slots = day.availableSlots;
+
+        if (timeFilter && timeFilter !== "any") {
+          slots = slots.filter((slot) => {
+            const startMins = timeToMinutes(slot.startTime);
+            if (timeFilter === "morning") return startMins < 720; // 9 AM - 12 PM
+            if (timeFilter === "afternoon") return startMins >= 720 && startMins < 960; // 12 PM - 4 PM
+            if (timeFilter === "late") return startMins >= 960; // 4 PM - 6 PM
+            return true;
+          });
+        }
+
+        return {
+          date: day.date,
+          prettyDate: formatPrettyDate(day.date),
+          dayName: day.dayName,
+          isOpen: day.isOpen,
+          operatingHours: day.operatingHours,
+          bookedAppointmentsCount: existingBookings.length,
+          availableCount: slots.length,
+          availableSlots: slots.map((s) => ({
+            startTime: s.startTime,
+            endTime: s.endTime,
+            label: s.label,
+          })),
+        };
+      });
+
+      const totalOpen = days.reduce((sum, d) => sum + d.availableCount, 0);
+
+      return {
+        status: "success",
+        serviceChecked: {
+          id: service.id,
+          name: service.name,
+          durationMinutes: service.durationMinutes,
+          price: service.price,
+        },
+        timeFilterApplied: timeFilter || "all",
+        totalAvailableSlotsFound: totalOpen,
+        days,
         nextOpenStudioDates: nextOpenDates,
       };
     },

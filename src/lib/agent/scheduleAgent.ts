@@ -70,7 +70,7 @@ PHOTOGRAPHY PACKAGES:
   ${servicesSummary}
 
 STRICT OPERATING RULES:
-1. ALWAYS use \`getAvailableSlots\` before quoting open times for any date. Never guess or fabricate availability.
+1. ALWAYS use \`checkAvailableBookings\` or \`getAvailableSlots\` to retrieve real-time calendar availability before quoting any open appointment times. Never guess, invent, or assume availability.
 2. Keep responses warm, concise, and SMS-friendly (2–4 short paragraphs max, using clear bullet points for time slots).
 3. To complete a booking with \`bookAppointment\`, make sure you have:
    - Session type (\`serviceId\`)
@@ -368,7 +368,7 @@ async function runSmartLocalDemoCoordinator(
     };
   }
 
-  // 6. Default: Check availability for requested or default service
+  // 6. Default / Availability Intent: Check available bookings for requested service
   const matchedService = findStudioService(userMessage) || STUDIO_SERVICES[0];
   let targetStartDate = openDates[0];
   if (lower.includes("saturday") || lower.includes("weekend")) {
@@ -378,29 +378,41 @@ async function runSmartLocalDemoCoordinator(
     targetStartDate = dateMatch[1];
   }
 
-  const slotsData = await callTool("getAvailableSlots", {
+  let timePref = "any";
+  if (lower.includes("morning")) timePref = "morning";
+  else if (lower.includes("afternoon")) timePref = "afternoon";
+  else if (lower.includes("evening") || lower.includes("late")) timePref = "late";
+
+  const slotsData = await callTool("checkAvailableBookings", {
     date: targetStartDate,
     daysCount: 3,
     serviceId: matchedService.id,
+    timeOfDay: timePref,
   });
 
-  const openDaysWithSlots = (slotsData.checkedRange || []).filter(
+  const openDaysWithSlots = (slotsData.days || slotsData.checkedRange || []).filter(
     (d: { isOpen: boolean; availableCount: number }) => d.isOpen && d.availableCount > 0,
   );
 
   const slotBullets = openDaysWithSlots
     .slice(0, 2)
-    .map((d: { prettyDate: string; date: string; availableSlots: { startTime: string; label: string }[] }) => {
-      const sample = d.availableSlots
-        .slice(0, 4)
-        .map((s) => formatTime12h(s.startTime))
-        .join(", ");
-      return `• **${d.prettyDate} (${d.date})**: ${sample}`;
-    })
+    .map(
+      (d: {
+        prettyDate: string;
+        date: string;
+        availableSlots: { startTime: string; label: string }[];
+      }) => {
+        const sample = d.availableSlots
+          .slice(0, 4)
+          .map((s) => formatTime12h(s.startTime))
+          .join(", ");
+        return `• **${d.prettyDate} (${d.date})**: ${sample}`;
+      },
+    )
     .join("\n");
 
   return {
-    reply: `Hi there! I checked our calendar for the **${matchedService.name}** (${matchedService.durationMinutes} mins, $${matchedService.price}). Here are some open times:\n\n${slotBullets}\n\nTo lock in a slot, just reply with your preferred **date & time**, your **full name**, and your **email address**!`,
+    reply: `Hi there! I retrieved our open calendar slots for the **${matchedService.name}** (${matchedService.durationMinutes} mins, $${matchedService.price}):\n\n${slotBullets}\n\nTo reserve your session, reply with your preferred **date & time**, **full name**, and **email address**!`,
     toolExecutions,
   };
 }

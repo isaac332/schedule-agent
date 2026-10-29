@@ -412,6 +412,10 @@ export function ScheduleAgentWorkspace() {
 
   const quickPrompts = [
     {
+      label: "Check Available Bookings",
+      text: `Can you check what bookings are available for portraits this week?`,
+    },
+    {
       label: "Pricing & Packages",
       text: "Hi! What photography packages and prices do you offer?",
     },
