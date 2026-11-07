@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "juntosxsiempre • Estudio Fotográfico | AI SMS Coordinator",
   description:
-    "Agente inteligente de reservaciones por SMS y WhatsApp para juntosxsiempre, estudio fotográfico mexicano en Roma Norte, CDMX. Disponibilidad en tiempo real, cotizador y confirmación de citas.",
+    "Agente inteligente de reservaciones por SMS y WhatsApp para juntosxsiempre, estudio fotográfico mexicano en Nogales, Sonora, México. Disponibilidad en tiempo real, cotizador y confirmación de citas.",
   applicationName: "juntosxsiempre",
   icons: {
     icon: "/favicon.ico",

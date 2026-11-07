@@ -6,6 +6,9 @@ export type ProviderMode =
   | "gemini-only"
   | "openrouter-only";
 
+export type MobileTab = "chat" | "calendar" | "bookings" | "studio" | "roi";
+
+
 export interface StudioService {
   id: string;
   name: string;

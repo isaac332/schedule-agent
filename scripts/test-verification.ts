@@ -65,7 +65,7 @@ async function runTests() {
   // 1. Verificar configuración de estudio
   assert.strictEqual(STUDIO_INFO.name, "juntosxsiempre", "Nombre debe ser juntosxsiempre");
   assert.strictEqual(STUDIO_INFO.coordinatorName, "Camila", "Coordinadora debe ser Camila");
-  assert.ok(STUDIO_INFO.address.includes("Roma Norte"), "Dirección debe estar en Roma Norte");
+  assert.ok(STUDIO_INFO.address.includes("Nogales") && STUDIO_INFO.address.includes("Sonora"), "Dirección debe estar en Nogales, Sonora");
   console.log("✓ 1. Studio Info verificado con éxito");
 
   // 2. Verificar servicios en Pesos Mexicanos (MXN)

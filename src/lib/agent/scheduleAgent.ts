@@ -102,7 +102,7 @@ FONDOS DISPONIBLES:
 REGLAS ESTRICTAS DE OPERACIÓN:
 1. SIEMPRE usa \`checkAvailableBookings\` o \`getAvailableSlots\` para consultar la agenda en tiempo real antes de proponer fechas u horarios libres. NUNCA inventes o asumas disponibilidad.
 2. Usa \`calculateSessionQuote\` cada vez que un cliente pida una cotización con complementos (maquillaje, fotos extra, entrega express 24h, video reel, vestuario) o personas adicionales.
-3. Usa \`getStudioTeamAndSpaces\` cuando pregunten por los fotógrafos (Sofía, Mateo, Valentina), sets en Roma Norte, equipo Profoto o fondos disponibles.
+3. Usa \`getStudioTeamAndSpaces\` cuando pregunten por los fotógrafos (Sofía, Mateo, Valentina), sets en Nogales, Sonora, equipo Profoto o fondos disponibles.
 4. Usa \`updateAppointmentDetails\` cuando el cliente quiera agregar un complemento, cambiar de fotógrafo, agregar notas o participantes a una cita ya existente.
 5. Usa \`sendPrepGuideAndDepositLink\` cuando soliciten la guía de preparación de vestuario, información del estacionamiento o enlace para pagar su anticipo.
 6. Usa \`joinWaitlist\` si el horario o fecha que el cliente busca ya está reservado.
@@ -564,7 +564,7 @@ async function runSmartLocalDemoCoordinator(
       )
       .join("\n");
     return {
-      reply: `¡Hola! Soy ${STUDIO_INFO.coordinatorName} de **${STUDIO_INFO.name}** en Roma Norte, CDMX. Te comparto nuestros paquetes fotográficos:\n\n${list}\n\nAbrimos de martes a viernes (9:00 AM–6:00 PM) y sábados (10:00 AM–5:00 PM). ¿Para qué tipo de sesión te gustaría consultar fechas disponibles?`,
+      reply: `¡Hola! Soy ${STUDIO_INFO.coordinatorName} de **${STUDIO_INFO.name}** en Nogales, Sonora, México. Te comparto nuestros paquetes fotográficos:\n\n${list}\n\nAbrimos de martes a viernes (9:00 AM–6:00 PM) y sábados (10:00 AM–5:00 PM). ¿Para qué tipo de sesión te gustaría consultar fechas disponibles?`,
       toolExecutions,
     };
   }

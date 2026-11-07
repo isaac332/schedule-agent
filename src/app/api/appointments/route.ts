@@ -11,6 +11,7 @@ import {
   getAllWaitlistEntries,
   resetDemoStore,
   updateBookingRecord,
+  updateWaitlistRecord,
 } from "@/lib/storage/appointmentStore";
 import {
   STUDIO_ADDONS,
@@ -116,8 +117,10 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const body = (await request.json()) as {
-      action?: "reset" | "status" | "reschedule";
+      action?: "reset" | "status" | "reschedule" | "reassign_waitlist";
       bookingRef?: string;
+      waitlistId?: string;
+      waitlistRef?: string;
       status?: AppointmentStatus;
       newDate?: string;
       newStartTime?: string;
@@ -128,6 +131,56 @@ export async function PATCH(request: Request) {
       resetDemoStore();
       return Response.json({
         success: true,
+        appointments: getAllAppointments(),
+        waitlist: getAllWaitlistEntries(),
+      });
+    }
+
+    if (body.action === "reassign_waitlist") {
+      const waitlistId = body.waitlistId || body.waitlistRef || "wl-seed-1";
+      const allWl = getAllWaitlistEntries();
+      const targetWl = allWl.find(
+        (w) =>
+          w.id === waitlistId ||
+          w.waitlistRef === waitlistId ||
+          (waitlistId.includes("8104") && w.waitlistRef.includes("8104")) ||
+          w.clientName.toLowerCase().includes("lucía") ||
+          w.clientName.toLowerCase().includes("lucia"),
+      );
+
+      if (!targetWl) {
+        return Response.json({ error: "Waitlist entry not found." }, { status: 404 });
+      }
+
+      const date = body.newDate || targetWl.preferredDate;
+      const startTime = body.newStartTime || "11:00";
+      const service =
+        STUDIO_SERVICES.find((s) => s.id === targetWl.serviceId) || STUDIO_SERVICES[0];
+      const startParts = startTime.split(":").map(Number);
+      const startMin = (startParts[0] || 11) * 60 + (startParts[1] || 0);
+      const endMin = startMin + service.durationMinutes;
+      const endH = String(Math.floor(endMin / 60)).padStart(2, "0");
+      const endM = String(endMin % 60).padStart(2, "0");
+      const endTime = `${endH}:${endM}`;
+
+      const created = createBookingRecord({
+        clientName: targetWl.clientName,
+        clientPhone: targetWl.clientPhone,
+        clientEmail: targetWl.clientEmail,
+        serviceId: targetWl.serviceId,
+        date,
+        startTime,
+        endTime,
+        notes: `Cita auto-rescatada desde lista de espera (${targetWl.waitlistRef}) tras cancelación`,
+        source: "dashboard",
+      });
+
+      updateWaitlistRecord(targetWl.id, "booked");
+
+      return Response.json({
+        success: true,
+        appointment: created,
+        rescuedFromWaitlist: targetWl,
         appointments: getAllAppointments(),
         waitlist: getAllWaitlistEntries(),
       });

@@ -9,11 +9,11 @@ export const STUDIO_INFO = {
   name: "juntosxsiempre",
   tagline: "Estudio Fotográfico Mexicano • Recuerdos para Siempre",
   coordinatorName: "Camila",
-  phone: "+52 55 8432 9901",
+  phone: "+52 631 313 8920",
   email: "citas@juntosxsiempre.mx",
-  address: "Av. Álvaro Obregón 168, Roma Norte, Cuauhtémoc, 06700 Ciudad de México, CDMX",
+  address: "Av. Álvaro Obregón 354, Col. Fundo Legal, 84000 Nogales, Sonora, México",
   parkingInfo:
-    "Servicio de valet parking y convenio en estacionamiento sobre Colima y Álvaro Obregón (a 50m del estudio).",
+    "Estacionamiento exclusivo para clientes y convenio a 50m sobre Av. Álvaro Obregón y Calle Campillo.",
   bufferMinutes: 15, // 15-min reset de luces y ambientación entre sesiones
   cancellationPolicy:
     "Cancelación o reprogramación sin penalización con 24 horas de anticipación. El anticipo es 100% transferible a cualquier fecha disponible.",
@@ -28,7 +28,7 @@ export const STUDIO_BACKDROPS = [
   "Lienzo Terracota Artesanal de Oaxaca",
   "Ciclorama Blanco Puro Infinito",
   "Cantera & Muro Colonial Texturizado",
-  "Luz Natural con Ventanales Estilo Roma Norte",
+  "Luz Natural con Ventanales Estilo Nogales (Atardecer Sonorense)",
   "Lienzo Arena Cálido & Marfil",
 ];
 
@@ -38,8 +38,8 @@ export const STUDIO_PHOTOGRAPHERS: StudioPhotographer[] = [
     name: "Sofía Morales",
     role: "Directora Creativa & Especialista en Parejas y Bodas",
     specialties: ["Sesión Pareja", "Compromiso & Boda", "Retrato Romántico"],
-    bio: "10+ años capturando historias de amor con estética editorial, tonos cálidos y luz natural en el corazón de la Roma Norte.",
-    assignedRoom: "Set A — Galería Roma Norte & Ventanales de Luz Natural",
+    bio: "10+ años capturando historias de amor con estética editorial, tonos cálidos y luz natural en el corazón de Nogales, Sonora.",
+    assignedRoom: "Set A — Galería Nogales & Ventanales de Luz Natural",
   },
   {
     id: "photo-mateo",

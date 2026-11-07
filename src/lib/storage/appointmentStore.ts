@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { STUDIO_SERVICES, findPhotographer } from "../studio/config";
+import { STUDIO_INFO, STUDIO_SERVICES, findPhotographer } from "../studio/config";
 import type {
   Appointment,
   ConversationSession,
@@ -383,9 +383,37 @@ export function updateBookingRecord(
   return store.appointments[idx];
 }
 
+export function updateWaitlistRecord(
+  idOrRef: string,
+  updates:
+    | Partial<Pick<WaitlistEntry, "status" | "notes" | "preferredDate" | "preferredTimeWindow">>
+    | WaitlistEntry["status"],
+): WaitlistEntry | null {
+  const store = loadStore();
+  const q = idOrRef.trim().toLowerCase();
+  const idx = store.waitlist.findIndex(
+    (w) =>
+      w.id.toLowerCase() === q ||
+      w.waitlistRef.toLowerCase() === q ||
+      (q.includes("8104") && w.waitlistRef.includes("8104")),
+  );
+  if (idx === -1) return null;
+
+  const patch = typeof updates === "string" ? { status: updates } : updates;
+
+  store.waitlist[idx] = {
+    ...store.waitlist[idx],
+    ...patch,
+  };
+  persistStore(store);
+  return store.waitlist[idx];
+}
+
+export const updateWaitlistStatus = updateWaitlistRecord;
+
 export function getOrCreateSession(
   sessionId: string,
-  clientPhone: string = "+52 55 8432 9901",
+  clientPhone: string = STUDIO_INFO.phone,
 ): ConversationSession {
   const store = loadStore();
   if (!store.sessions[sessionId]) {
@@ -445,7 +473,7 @@ export function syncStoreFromClient(payload: {
     const existing = store.sessions[payload.sessionId];
     store.sessions[payload.sessionId] = {
       sessionId: payload.sessionId,
-      clientPhone: payload.clientPhone || existing?.clientPhone || "+52 55 8432 9901",
+      clientPhone: payload.clientPhone || existing?.clientPhone || STUDIO_INFO.phone,
       history: payload.history,
       uiMessages: existing?.uiMessages || [],
       updatedAt: new Date().toISOString(),

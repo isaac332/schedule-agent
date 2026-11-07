@@ -1,6 +1,6 @@
 # juntosxsiempre — AI SMS Schedule Agent
 
-Un agente de citas fotográficas por SMS y WhatsApp para el estudio mexicano **juntosxsiempre** (Roma Norte, CDMX), con paleta de color crema-rosa, animaciones parallax y diseñado con **100% prioridad móvil**. Desarrollado con Next.js (App Router) y enrutamiento inteligente multi-proveedor entre **Google Gemini** y **OpenRouter** vía `@llm-multi-provider/core`.
+Un agente de citas fotográficas por SMS y WhatsApp para el estudio mexicano **juntosxsiempre** (Nogales, Sonora, México), con paleta de color crema-rosa, animaciones parallax y diseñado con **100% prioridad móvil**. Desarrollado con Next.js (App Router) y enrutamiento inteligente multi-proveedor entre **Google Gemini** y **OpenRouter** vía `@llm-multi-provider/core`.
 
 ---
 
@@ -8,12 +8,12 @@ Un agente de citas fotográficas por SMS y WhatsApp para el estudio mexicano **j
 
 - **Coordinadora de Citas con IA ("Camila")**:
   - Responde dudas sobre paquetes fotográficos mexicanos (Sesión Juntos x Siempre de Parejas & Compromiso, Retrato Ejecutivo, Familia & Maternidad, Quinceañeras & Graduación, Campañas Comerciales), precios en MXN, anticipos y políticas de estudio.
-  - Verifica disponibilidad en tiempo real en los horarios de Roma Norte (`Martes a Viernes 9:00 AM–6:00 PM`, `Sábados 10:00 AM–5:00 PM`) con buffers automáticos de `15 minutos` para ajuste de iluminación.
+  - Verifica disponibilidad en tiempo real en los horarios de Nogales, Sonora (`Martes a Viernes 9:00 AM–6:00 PM`, `Sábados 10:00 AM–5:00 PM`) con buffers automáticos de `15 minutos` para ajuste de iluminación.
   - Genera cotizaciones detalladas con complementos: Maquillaje y Peinado Profesional (HMUA), Paquete de 5 Fotos Extra con Retoque Fino, Entrega Express 24h, Video Reel Vertical 4K para Instagram/TikTok y Asesoría de Vestuario.
   - Agenda citas emitiendo códigos de reservación únicos (`JXS-xxxx`).
   - Consulta, reprograma, actualiza fotógrafos/fondos y cancela reservaciones con reasignación automática a lista de espera.
 - **Paleta de Color Crema-Rosa**:
-  - Diseño editorial cálido inspirado en la atmósfera colonial y moderna de la Roma Norte: fondos marfil y crema cálido (`#FBF7F4`, `#FFFDFB`, `#FAF3EC`), acentos en rosa empolvado, blush y rosa magenta suave (`#FCE7EC`, `#E0446E`, `#C52752`), con tipografía legible en espresso ciruela (`#2D1822`).
+  - Diseño editorial cálido inspirado en la atmósfera colonial y atardeceres de Nogales, Sonora: fondos marfil y crema cálido (`#FBF7F4`, `#FFFDFB`, `#FAF3EC`), acentos en rosa empolvado, blush y rosa magenta suave (`#FCE7EC`, `#E0446E`, `#C52752`), con tipografía legible en espresso ciruela (`#2D1822`).
 - **Animaciones Parallax**:
   - Implementación con CSS Scroll-Driven Animations nativas (`view-timeline`) con capas estacionales a diferentes velocidades (fondo bokeh rosa, elementos ópticos Profoto 50mm, tarjeta de estudio en primer plano).
   - Fallback en JavaScript reactivo con `requestAnimationFrame` y listener de scroll para compatibilidad universal.

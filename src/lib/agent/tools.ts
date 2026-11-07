@@ -36,7 +36,7 @@ export const STUDIO_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   {
     name: "getStudioServices",
     description:
-      "Devuelve los paquetes fotográficos de juntosxsiempre, precios en MXN, duraciones, políticas de anticipo, complementos opcionales (maquillaje, retoques extra, reel), horarios de servicio y dirección en Roma Norte, CDMX.",
+      "Devuelve los paquetes fotográficos de juntosxsiempre, precios en MXN, duraciones, políticas de anticipo, complementos opcionales (maquillaje, retoques extra, reel), horarios de servicio y dirección en Nogales, Sonora, México.",
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -130,7 +130,7 @@ export const STUDIO_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   {
     name: "getStudioTeamAndSpaces",
     description:
-      "Obtiene detalles de los fotógrafos de juntosxsiempre (Sofía Morales, Mateo Hernández, Valentina Ramos), sus especialidades, sets en Roma Norte, equipo Profoto y fondos artesanales disponibles.",
+      "Obtiene detalles de los fotógrafos de juntosxsiempre (Sofía Morales, Mateo Hernández, Valentina Ramos), sus especialidades, sets en Nogales, Sonora, equipo Profoto y fondos artesanales disponibles.",
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -243,7 +243,7 @@ export const STUDIO_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   {
     name: "sendPrepGuideAndDepositLink",
     description:
-      "Envía la guía de preparación y vestuario, información del estacionamiento en Roma Norte y el enlace de pago de anticipo para una reservación existente.",
+      "Envía la guía de preparación y vestuario, información del estacionamiento en Nogales, Sonora y el enlace de pago de anticipo para una reservación existente.",
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -566,7 +566,7 @@ export function createStudioToolFunctions(defaultClientPhone?: string): ToolFunc
       };
 
       const clientName = args.clientName?.trim();
-      const clientPhone = args.clientPhone?.trim() || defaultClientPhone || "+52 55 8432 9901";
+      const clientPhone = args.clientPhone?.trim() || defaultClientPhone || STUDIO_INFO.phone;
       const clientEmail = args.clientEmail?.trim() || "cliente@ejemplo.com";
       const dateStr = args.date?.trim() || "";
       const startTimeRaw = args.startTime?.trim() || "";
@@ -788,7 +788,7 @@ export function createStudioToolFunctions(defaultClientPhone?: string): ToolFunc
 
       const entry = createWaitlistRecord({
         clientName: args.clientName?.trim() || "Cliente Estimado",
-        clientPhone: args.clientPhone?.trim() || defaultClientPhone || "+52 55 8432 9901",
+        clientPhone: args.clientPhone?.trim() || defaultClientPhone || STUDIO_INFO.phone,
         clientEmail: args.clientEmail?.trim() || "cliente@ejemplo.com",
         serviceId: service.id,
         preferredDate:
