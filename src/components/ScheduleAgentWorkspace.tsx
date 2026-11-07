@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ArrowRight,
   BellRing,
   Bot,
   Calendar,
@@ -777,32 +778,33 @@ export function ScheduleAgentWorkspace() {
 
       {/* --- Sticky Top Mobile Bar (100% Mobile Focused) --- */}
       <header className="sticky top-0 z-30 border-b border-pink-200/70 bg-[#fffdfb]/92 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-md items-center justify-between px-3 py-2.5">
+        <div className="mx-auto flex w-full max-w-md items-center justify-between px-3 py-2 min-w-0">
           {/* Logo & Brand Identity */}
-          <div className="flex items-center gap-2">
-            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#e0446e] via-[#f06a8f] to-[#f8cfda] text-white shadow-md shadow-pink-500/25">
-              <Camera className="h-5 w-5 stroke-[2.2]" />
-              <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] text-white ring-2 ring-white">
+          <div className="flex items-center gap-2 min-w-0 shrink">
+            <div className="relative flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-tr from-[#e0446e] via-[#f06a8f] to-[#f8cfda] text-white shadow-2xs">
+              <Camera className="h-4 w-4 sm:h-4.5 sm:w-4.5 stroke-[2.2]" />
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-emerald-500 text-[8px] text-white ring-1.5 ring-white">
                 ✓
               </span>
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <h1 className="text-sm sm:text-base font-extrabold tracking-tight text-[#2d1822]">
+                <h1 className="text-xs sm:text-sm font-extrabold tracking-tight text-[#2d1822] truncate">
                   juntosxsiempre
                 </h1>
-                <span className="rounded-full bg-pink-100 px-1.5 py-0.2 text-[9px] font-bold text-[#c52752]">
+                <span className="shrink-0 rounded-full bg-pink-100 px-1.5 py-0.2 text-[8px] sm:text-[9px] font-bold text-[#c52752]">
                   Nogales
                 </span>
               </div>
-              <p className="text-[10px] sm:text-[11px] font-medium text-[#7b5965] flex items-center gap-1">
-                <MapPin className="h-3 w-3 text-[#e0446e]" /> Nogales, Sonora • Estudio
+              <p className="text-[9px] sm:text-[10px] font-medium text-[#7b5965] flex items-center gap-0.5 truncate">
+                <MapPin className="h-2.5 w-2.5 text-[#e0446e] shrink-0" />
+                <span className="truncate">Nogales, Son. • Estudio</span>
               </p>
             </div>
           </div>
 
           {/* Action Pills */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             {/* Guided Tour Pill */}
             <button
               type="button"
@@ -810,44 +812,41 @@ export function ScheduleAgentWorkspace() {
                 setIsTourOpen(true);
                 setTourStepIndex(0);
               }}
-              className="inline-flex items-center gap-1 rounded-xl border border-pink-300 bg-white/95 px-2 py-1.5 text-xs font-bold text-[#c52752] shadow-xs hover:border-pink-400 active:scale-95 transition"
+              className="inline-flex items-center gap-1 rounded-xl border border-pink-200 bg-white/95 px-2 py-1 text-xs font-bold text-[#c52752] shadow-2xs hover:border-pink-300 active:scale-95 transition"
               title="Activar Tour Guiado Interactivo"
               aria-label="Activar Tour Guiado"
             >
               <Compass className="h-3.5 w-3.5 text-[#e0446e]" />
-              <span className="hidden xxs:inline">Tour</span>
+              <span className="hidden sm:inline">Tour</span>
             </button>
 
             {/* Owner Advantages Pitch Pill */}
             <button
               type="button"
               onClick={() => setIsOwnerPitchOpen(true)}
-              className="inline-flex items-center gap-1 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-50 via-rose-50 to-pink-50 px-2 py-1.5 text-xs font-bold text-[#9e193e] shadow-xs hover:border-pink-300 active:scale-95 transition"
+              className="inline-flex items-center gap-1 rounded-xl border border-amber-300/80 bg-gradient-to-r from-amber-50 via-rose-50 to-pink-50 px-2 py-1 text-xs font-bold text-[#9e193e] shadow-2xs hover:border-pink-300 active:scale-95 transition"
               title="Ventajas Exclusivas para el Dueño del Estudio (ROI)"
             >
-              <Sparkles className="h-3.5 w-3.5 text-amber-500 fill-amber-400" />
-              <span>Ventajas</span>
-              <span className="rounded-full bg-emerald-100 px-1 py-0.2 text-[8px] font-black text-emerald-800">
-                +ROI
-              </span>
+              <Sparkles className="h-3 w-3 text-amber-500 fill-amber-400" />
+              <span>ROI</span>
             </button>
 
             {/* Quick Provider Pill */}
             <button
               type="button"
               onClick={() => setIsProviderDialogOpen(true)}
-              className="inline-flex items-center gap-1 rounded-xl border border-pink-200 bg-pink-50/70 px-2 py-1.5 text-xs font-semibold text-[#9e193e] active:scale-95 transition"
+              className="inline-flex h-7.5 w-7.5 sm:h-8 sm:w-8 items-center justify-center rounded-xl border border-pink-200 bg-pink-50/70 text-[#9e193e] active:scale-95 transition"
               title="Configuración de IA & API Keys"
+              aria-label="Configuración de IA"
             >
               <Cpu className="h-3.5 w-3.5 text-[#e0446e]" />
-              <span className="hidden xs:inline">{PROVIDER_MODE_LABELS[providerMode]?.shortBadge}</span>
             </button>
 
             {/* Reset Menu Pill */}
             <button
               type="button"
               onClick={() => setIsResetDialogOpen(true)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-pink-200 bg-white text-[#7b5965] hover:text-[#e0446e] active:scale-95 transition"
+              className="inline-flex h-7.5 w-7.5 sm:h-8 sm:w-8 items-center justify-center rounded-xl border border-pink-200 bg-white text-[#7b5965] hover:text-[#e0446e] active:scale-95 transition"
               title="Reiniciar Demo"
               aria-label="Reiniciar Demo"
             >
@@ -859,30 +858,18 @@ export function ScheduleAgentWorkspace() {
 
       {/* --- Owner Presentation HUD & 5-Pillar Guided Tour (Selling to Studio Owner) --- */}
       {isOwnerPitchMode ? (
-        <div className="border-b border-pink-200/90 bg-gradient-to-r from-[#faebef] via-[#fffdfb] to-[#fdf2f4] px-3 py-2 shadow-xs">
-          <div className="mx-auto max-w-md">
-            <div className="flex items-center justify-between gap-1.5 mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-[#e0446e] text-white text-[10px] shadow-xs">
+        <div className="border-b border-pink-200/80 bg-gradient-to-r from-[#faebef] via-[#fffdfb] to-[#fdf2f4] px-3 py-1.5 shadow-2xs">
+          <div className="mx-auto w-full max-w-md min-w-0">
+            <div className="flex items-center justify-between gap-1.5 mb-1">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-md bg-[#e0446e] text-white text-[9px] shadow-2xs">
                   👑
                 </span>
-                <span className="text-[11px] font-black uppercase tracking-wider text-[#9e193e]">
-                  Modo Presentación Dueño (Activo)
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#9e193e] truncate">
+                  Modo Dueño
                 </span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsTourOpen(true);
-                    setTourStepIndex(0);
-                  }}
-                  className="rounded-lg bg-white/95 border border-pink-200 px-2 py-0.5 text-[9px] font-extrabold text-[#c52752] hover:bg-pink-100 active:scale-95 transition flex items-center gap-1"
-                  title="Iniciar Tour Guiado"
-                >
-                  <Compass className="h-2.5 w-2.5 text-[#e0446e]" />
-                  <span>Tour Guiado</span>
-                </button>
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsOwnerPitchOpen(true)}
@@ -893,7 +880,7 @@ export function ScheduleAgentWorkspace() {
                 <button
                   type="button"
                   onClick={() => setIsOwnerPitchMode(false)}
-                  className="text-[9px] font-semibold text-[#7b5965] hover:text-[#2d1822] underline"
+                  className="rounded-lg bg-white/80 border border-pink-200 px-1.5 py-0.5 text-[9px] font-semibold text-[#7b5965] hover:text-[#2d1822]"
                   title="Cambiar a vista de cliente final"
                 >
                   Vista Cliente
@@ -901,8 +888,8 @@ export function ScheduleAgentWorkspace() {
               </div>
             </div>
 
-            {/* 5-Pillar Guided Interactive Proofs Bar */}
-            <div className="grid grid-cols-5 gap-1 text-center font-bold text-[9px]">
+            {/* 5-Pillar Horizontal Carousel (No Horizontal Overflow) */}
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
               <button
                 type="button"
                 onClick={() => {
@@ -911,11 +898,11 @@ export function ScheduleAgentWorkspace() {
                     "Quiero cotizar la Sesión Juntos x Siempre agregando Maquillaje y Peinado Profesional y Video Reel 4K Vertical.",
                   );
                 }}
-                className="rounded-xl border border-pink-200 bg-white/95 p-1.5 text-[#c52752] shadow-2xs hover:bg-pink-50 active:scale-95 transition"
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-pink-200 bg-white/95 px-2 py-1 text-[9px] font-bold text-[#c52752] shadow-2xs hover:bg-pink-50 active:scale-95 transition"
                 title="1. Ver upselling automático de alto margen"
               >
-                <span className="block text-xs">💎</span>
-                <span className="truncate block font-extrabold">+42% Upsell</span>
+                <span>💎</span>
+                <span>+42% Upsell</span>
               </button>
 
               <button
@@ -926,11 +913,11 @@ export function ScheduleAgentWorkspace() {
                     "Hola, buenas noches! Mi prometido y yo queremos una sesión de pareja para este sábado antes del atardecer. ¿Tienen algún espacio libre y cuánto cuesta?",
                   );
                 }}
-                className="rounded-xl border border-pink-200 bg-white/95 p-1.5 text-[#5e3347] shadow-2xs hover:bg-pink-50 active:scale-95 transition"
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-pink-200 bg-white/95 px-2 py-1 text-[9px] font-bold text-[#5e3347] shadow-2xs hover:bg-pink-50 active:scale-95 transition"
                 title="2. Simular cliente a las 11:42 PM"
               >
-                <span className="block text-xs">🌙</span>
-                <span className="truncate block font-extrabold">24/7 &lt; 2s</span>
+                <span>🌙</span>
+                <span>24/7 &lt; 2s</span>
               </button>
 
               <button
@@ -939,11 +926,11 @@ export function ScheduleAgentWorkspace() {
                   setMobileTab("calendar");
                   handleTestBufferCollision();
                 }}
-                className="rounded-xl border border-pink-200 bg-white/95 p-1.5 text-[#5e3347] shadow-2xs hover:bg-pink-50 active:scale-95 transition"
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-pink-200 bg-white/95 px-2 py-1 text-[9px] font-bold text-[#5e3347] shadow-2xs hover:bg-pink-50 active:scale-95 transition"
                 title="3. Ver algoritmo de buffer de 15m Profoto"
               >
-                <span className="block text-xs">🛡️</span>
-                <span className="truncate block font-extrabold">Buffer 15m</span>
+                <span>🛡️</span>
+                <span>Buffer 15m</span>
               </button>
 
               <button
@@ -952,11 +939,11 @@ export function ScheduleAgentWorkspace() {
                   handleCancelBooking("JXS-2041");
                   setMobileTab("bookings");
                 }}
-                className="rounded-xl border border-pink-200 bg-white/95 p-1.5 text-[#5e3347] shadow-2xs hover:bg-pink-50 active:scale-95 transition"
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-pink-200 bg-white/95 px-2 py-1 text-[9px] font-bold text-[#5e3347] shadow-2xs hover:bg-pink-50 active:scale-95 transition"
                 title="4. Ver rescate de cita cancelada"
               >
-                <span className="block text-xs">🔄</span>
-                <span className="truncate block font-extrabold">Auto-Rescate</span>
+                <span>🔄</span>
+                <span>Auto-Rescate</span>
               </button>
 
               <button
@@ -964,11 +951,11 @@ export function ScheduleAgentWorkspace() {
                 onClick={() => {
                   setMobileTab("roi");
                 }}
-                className="rounded-xl border border-emerald-300 bg-emerald-50/95 p-1.5 text-emerald-800 shadow-2xs hover:bg-emerald-100 active:scale-95 transition"
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50/95 px-2 py-1 text-[9px] font-extrabold text-emerald-800 shadow-2xs hover:bg-emerald-100 active:scale-95 transition"
                 title="5. Proyección económica y ROI"
               >
-                <span className="block text-xs">📊</span>
-                <span className="truncate block font-extrabold">Calc. ROI</span>
+                <span>📊</span>
+                <span>Calc. ROI</span>
               </button>
             </div>
           </div>
@@ -1063,95 +1050,20 @@ export function ScheduleAgentWorkspace() {
             </div>
           </div>
 
-          {/* Interactive Studio Advantages Ticker for the Owner */}
-          <div className="mt-3 border-t border-pink-100/80 pt-2.5">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#c52752] flex items-center gap-1">
-                <Sparkles className="h-3 w-3 text-[#e0446e]" /> Ventajas para el Dueño:
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsOwnerPitchOpen(true)}
-                className="text-[10px] font-bold text-[#e0446e] hover:underline"
-              >
-                Ver Demostración →
-              </button>
-            </div>
-            <div className="grid grid-cols-2 xs:grid-cols-3 gap-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  sendTextMessage(
-                    "Quiero cotizar la Sesión Juntos x Siempre agregando Maquillaje y Peinado Profesional y Video Reel 4K Vertical.",
-                  );
-                  setMobileTab("chat");
-                }}
-                className="flex items-center gap-1.5 rounded-xl border border-pink-100 bg-white/80 px-2 py-1.5 text-left text-[10px] font-semibold text-[#5e3347] hover:bg-pink-50 transition active:scale-95"
-              >
-                <span className="text-xs">💎</span>
-                <span className="truncate">+42% Ticket</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  sendTextMessage(
-                    "Hola, buenas noches! Mi prometido y yo queremos una sesión de pareja para este sábado antes del atardecer. ¿Tienen algún espacio libre y cuánto cuesta?",
-                  );
-                  setMobileTab("chat");
-                }}
-                className="flex items-center gap-1.5 rounded-xl border border-pink-100 bg-white/80 px-2 py-1.5 text-left text-[10px] font-semibold text-[#5e3347] hover:bg-pink-50 transition active:scale-95"
-              >
-                <span className="text-xs">🌙</span>
-                <span className="truncate">24/7 en &lt; 2s</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  handleTestBufferCollision();
-                  setMobileTab("calendar");
-                }}
-                className="flex items-center gap-1.5 rounded-xl border border-pink-100 bg-white/80 px-2 py-1.5 text-left text-[10px] font-semibold text-[#5e3347] hover:bg-pink-50 transition active:scale-95"
-              >
-                <span className="text-xs">🛡️</span>
-                <span className="truncate">Buffer 15m</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  handleCancelBooking("JXS-2041");
-                  setMobileTab("bookings");
-                }}
-                className="flex items-center gap-1.5 rounded-xl border border-pink-100 bg-white/80 px-2 py-1.5 text-left text-[10px] font-semibold text-[#5e3347] hover:bg-pink-50 transition active:scale-95"
-              >
-                <span className="text-xs">🔄</span>
-                <span className="truncate">Rescate Citas</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  sendTextMessage(
-                    "¿Me puedes enviar la guía de preparación de vestuario y el enlace de anticipo para la cita JXS-2055?",
-                  );
-                  setMobileTab("chat");
-                }}
-                className="flex items-center gap-1.5 rounded-xl border border-pink-100 bg-white/80 px-2 py-1.5 text-left text-[10px] font-semibold text-[#5e3347] hover:bg-pink-50 transition active:scale-95"
-              >
-                <span className="text-xs">👗</span>
-                <span className="truncate">Anti No-Show</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsTourOpen(true);
-                  setTourStepIndex(0);
-                }}
-                className="flex items-center gap-1.5 rounded-xl border border-pink-200 bg-gradient-to-r from-pink-50 to-rose-50 px-2 py-1.5 text-left text-[10px] font-bold text-[#c52752] hover:bg-pink-100 transition active:scale-95"
-                title="Activar Tour Guiado Interactivo"
-              >
-                <span className="text-xs">🧭</span>
-                <span className="truncate">Tour Guiado</span>
-              </button>
-            </div>
+          {/* Studio Advantages Quick Pitch Banner */}
+          <div className="mt-3 border-t border-pink-100/80 pt-2.5 flex items-center justify-between">
+            <span className="text-[11px] font-bold text-[#c52752] flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-[#e0446e]" />
+              <span>Propuesta de Negocio &amp; ROI</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsOwnerPitchOpen(true)}
+              className="inline-flex items-center gap-1 rounded-xl bg-pink-100/90 px-2.5 py-1 text-[11px] font-extrabold text-[#c52752] hover:bg-pink-200 active:scale-95 transition"
+            >
+              <span>Ver Ventajas</span>
+              <ArrowRight className="h-3 w-3" />
+            </button>
           </div>
         </div>
       </section>
@@ -2231,8 +2143,8 @@ export function ScheduleAgentWorkspace() {
       <LightDismissDialog
         open={isOwnerPitchOpen}
         onClose={() => setIsOwnerPitchOpen(false)}
-        title="Ventajas Exclusivas para el Dueño"
-        subtitle="Por qué juntosxsiempre multiplica las ventas y la tranquilidad de tu estudio en Nogales, Sonora."
+        title="Ventajas para el Dueño & ROI"
+        subtitle="Automatizaciones y rentabilidad para juntosxsiempre en Nogales, Sonora."
         maxWidthClass="max-w-xl"
       >
         <OwnerPitchSection
