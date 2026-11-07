@@ -1,9 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #08090d;
-  --foreground: #f8fafc;
-  --accent-gold: #f59e0b;
+  --background: #fbf7f4;
+  --foreground: #2d1822;
+  --cream-50: #fffdfb;
+  --cream-100: #faf3ec;
+  --cream-200: #f4e8dc;
+  --cream-300: #ebd8c7;
+  --pink-50: #fdf2f4;
+  --pink-100: #fce7ec;
+  --pink-200: #f8cfda;
+  --pink-400: #f06a8f;
+  --pink-500: #e0446e;
+  --pink-600: #c52752;
+  --pink-700: #9e193e;
+  --rose-gold: #c98894;
 }
 
 @theme inline {
@@ -17,23 +28,17 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
-  min-block-size: 100dvh;
+  min-height: 100dvh;
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: contain;
 }
 
-/* --- Responsive Fluid Typography (responsive-design) --- */
-.studio-hero-title {
-  font-size: clamp(1rem, 0.85rem + 0.65vw, 1.35rem);
-  line-height: 1.2;
+/* --- Mobile Viewport and Touch Ergonomics --- */
+.mobile-safe-bottom {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem));
 }
 
-.studio-kpi-value {
-  font-size: clamp(1.25rem, 1rem + 1.1vw, 1.75rem);
-  line-height: 1.15;
-}
-
-/* --- Hide Scrollbar for Horizontal Touch Rails --- */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -42,22 +47,116 @@ body {
   scrollbar-width: none;
 }
 
-/* --- Size-Aware Studio Cards (size-aware-styling & card) --- */
+/* --- Parallax Scroll-Driven Animations (parallax-scroll-effects) --- */
+.parallax-stage {
+  position: relative;
+  overflow: clip;
+}
+
+@keyframes parallax-float-bg {
+  from {
+    transform: translateY(-25px) scale(0.96);
+  }
+  to {
+    transform: translateY(35px) scale(1.04);
+  }
+}
+
+@keyframes parallax-float-mid {
+  from {
+    transform: translateY(30px);
+  }
+  to {
+    transform: translateY(-30px);
+  }
+}
+
+@keyframes parallax-float-fg {
+  from {
+    transform: translateY(45px);
+  }
+  to {
+    transform: translateY(-15px);
+  }
+}
+
+@keyframes gentle-sway {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(1.5deg);
+  }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.05);
+  }
+}
+
+.animate-gentle-sway {
+  animation: gentle-sway 6s ease-in-out infinite;
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 4s ease-in-out infinite;
+}
+
+/* Native CSS Scroll-Driven Animations where supported */
+@supports ((animation-timeline: view()) and (animation-range: entry)) {
+  .parallax-stage {
+    view-timeline: --studio-hero-view;
+  }
+
+  .parallax-layer-back {
+    animation: parallax-float-bg linear both;
+    animation-timeline: --studio-hero-view;
+    animation-range: entry 25% exit 50%;
+  }
+
+  .parallax-layer-mid {
+    animation: parallax-float-mid linear both;
+    animation-timeline: --studio-hero-view;
+    animation-range: entry 25% exit 75%;
+  }
+
+  .parallax-layer-front {
+    animation: parallax-float-fg linear both;
+    animation-timeline: --studio-hero-view;
+    animation-range: entry 25% exit 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .parallax-layer-back,
+  .parallax-layer-mid,
+  .parallax-layer-front,
+  .animate-gentle-sway,
+  .animate-pulse-subtle {
+    animation: none !important;
+  }
+}
+
+/* --- Container Queries & Mobile Size-Aware Cards --- */
 .kpi-card-container,
 .slot-grid-container,
 .booking-card-container {
   container-type: inline-size;
 }
 
-/* Default safe stacked layout for narrow containers */
 .booking-item-card {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
-/* Fallback using media queries for older browsers (size-aware-styling) */
-@media (min-width: 640px) {
+@container (min-width: 480px) {
   .booking-item-card {
     flex-direction: row;
     align-items: center;
@@ -65,64 +164,47 @@ body {
   }
 }
 
-/* Overwrite with container queries where supported (size-aware-styling) */
-@supports (container-type: inline-size) {
-  @media (min-width: 640px) {
-    .booking-item-card {
-      flex-direction: column;
-      align-items: stretch;
-    }
-  }
-
-  @container (min-width: 480px) {
-    .booking-item-card {
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
-    }
-  }
-}
-
-/* --- Light-Dismiss Modal Dialog Backdrop (light-dismiss-a-dialog) --- */
+/* --- Light-Dismiss Dialog with Rosy Cream Backdrop --- */
 dialog::backdrop {
-  background-color: rgba(4, 6, 14, 0.78);
+  background-color: rgba(45, 24, 34, 0.6);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
-/* --- Responsive Data Table with Container Queries & Sticky Headers (responsive-table) --- */
+/* --- Mobile Responsive Data Table --- */
 .table-wrapper {
   overflow: auto;
   max-inline-size: 100%;
   max-block-size: min(520px, 70dvh);
   container-type: inline-size;
-  border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(14, 17, 26, 0.85);
+  border-radius: 1.25rem;
+  border: 1px solid rgba(224, 68, 110, 0.15);
+  background: rgba(255, 253, 251, 0.95);
 }
 
 .studio-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  --label-2: "Package";
-  --label-3: "Schedule";
-  --label-4: "Contact";
-  --label-5: "Status";
-  --label-6: "Action";
+  --label-2: "Paquete";
+  --label-3: "Horario";
+  --label-4: "Contacto";
+  --label-5: "Estatus";
+  --label-6: "Acción";
 }
 
 .studio-table thead {
   position: sticky;
   inset-block-start: 0;
   z-index: 2;
-  background: #131724;
+  background: #fdf5f0;
 }
 
 .studio-table tbody th {
   position: sticky;
   inset-inline-start: 0;
   z-index: 1;
-  background: #101420;
+  background: #fffdfb;
 }
 
 @container (width < 640px) {
@@ -141,18 +223,18 @@ dialog::backdrop {
 
   .studio-table tr {
     margin: 0.75rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 0.875rem;
-    background: #131724;
+    border: 1px solid rgba(224, 68, 110, 0.15);
+    border-radius: 1rem;
+    background: #fffdfb;
     overflow: hidden;
-    box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 16px -2px rgba(224, 68, 110, 0.08);
   }
 
   .studio-table tbody th {
     position: relative;
     inset: auto;
-    background: rgba(255, 255, 255, 0.03);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: #fdf2f4;
+    border-bottom: 1px solid rgba(224, 68, 110, 0.12);
     padding: 0.75rem 1rem;
   }
 
@@ -174,7 +256,7 @@ dialog::backdrop {
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #94a3b8;
+    color: #9e193e;
     text-align: left;
     flex-shrink: 0;
   }
@@ -196,25 +278,25 @@ dialog::backdrop {
   }
 }
 
-/* --- Validate Input After Interaction (validate-input-after-interaction) --- */
+/* --- Form Field Validation with User-Invalid --- */
 .field-hint {
   display: block;
-  color: #94a3b8;
-  font-size: 0.72rem;
+  color: #7b5965;
+  font-size: 0.75rem;
   margin-bottom: 0.25rem;
 }
 
 .error-msg {
   display: none;
-  color: #f87171;
+  color: #c52752;
   font-size: 0.75rem;
   margin-top: 0.3rem;
 }
 
 .studio-input:user-invalid,
 .studio-input.user-invalid-fallback {
-  border-color: #ef4444;
-  background-color: rgba(239, 68, 68, 0.1);
+  border-color: #e0446e;
+  background-color: rgba(224, 68, 110, 0.06);
 }
 
 .studio-input:user-invalid + .error-msg,
@@ -228,5 +310,5 @@ dialog::backdrop {
 }
 
 .field:has(.studio-input:user-invalid) .field-hint {
-  color: #fca5a5;
+  color: #c52752;
 }

@@ -49,69 +49,71 @@ export function buildSystemPrompt(clientPhone: string): string {
 
   const servicesSummary = STUDIO_SERVICES.map(
     (s) =>
-      `- ${s.name} (id: "${s.id}"): ${s.durationMinutes} mins | $${s.price} ($${s.depositAmount} deposit) | Max ${s.maxParticipants} person(s)`,
+      `- ${s.name} (id: "${s.id}"): ${s.durationMinutes} mins | $${s.price.toLocaleString("es-MX")} MXN ($${s.depositAmount.toLocaleString("es-MX")} anticipo) | Máx ${s.maxParticipants} persona(s)`,
   ).join("\n  ");
 
   const addOnsSummary = STUDIO_ADDONS.map(
     (a) =>
-      `- ${a.name} (id: "${a.id}"): +$${a.price}${a.extraMinutes > 0 ? ` (+${a.extraMinutes}m)` : ""} — ${a.description}`,
+      `- ${a.name} (id: "${a.id}"): +$${a.price.toLocaleString("es-MX")} MXN${a.extraMinutes > 0 ? ` (+${a.extraMinutes}m)` : ""} — ${a.description}`,
   ).join("\n  ");
 
   const photographersSummary = STUDIO_PHOTOGRAPHERS.map(
-    (p) => `- ${p.name} (${p.role}, ${p.assignedRoom}): Specialties: ${p.specialties.join(", ")}`,
+    (p) => `- ${p.name} (${p.role}, ${p.assignedRoom}): Especialidades: ${p.specialties.join(", ")}`,
   ).join("\n  ");
 
   const hoursSummary = STUDIO_HOURS.map((h) =>
     h.isOpen
       ? `${h.dayName}: ${formatTime12h(h.openTime)} – ${formatTime12h(h.closeTime)}`
-      : `${h.dayName}: Closed`,
+      : `${h.dayName}: Cerrado`,
   ).join(" | ");
 
-  return `You are ${STUDIO_INFO.coordinatorName}, the AI Studio Booking Coordinator for ${STUDIO_INFO.name}.
-You communicate with clients via SMS / text messaging to answer questions, check studio availability, calculate itemized quotes, recommend photographers/backdrops, send pre-shoot prep guides & deposit links, manage the priority waitlist, and book, update, reschedule, or cancel photography appointments.
+  return `Eres ${STUDIO_INFO.coordinatorName}, la Coordinadora de Citas con Inteligencia Artificial del estudio fotográfico mexicano "${STUDIO_INFO.name}".
+Te comunicas con los clientes por WhatsApp y SMS de manera cálida, profesional, atenta y con hospitalidad mexicana para resolver dudas, revisar disponibilidad de agenda en tiempo real, cotizar paquetes con complementos, coordinar con fotógrafos y sets, enviar guías de preparación/vestuario con enlaces de anticipo, gestionar la lista de espera prioritaria y agendar, reprogramar o cancelar sesiones. Hablas español mexicano por defecto, pero si el cliente escribe en inglés, responde en inglés con la misma calidez y precisión.
 
-CURRENT DATE CONTEXT:
-- Today's Date: ${todayStr} (${formatPrettyDate(todayStr)})
-- Client's Phone Number: ${clientPhone}
-- Upcoming Calendar Reference:
+CONTEXTO DE FECHA ACTUAL:
+- Fecha de hoy: ${todayStr} (${formatPrettyDate(todayStr)})
+- Teléfono del cliente: ${clientPhone}
+- Próximos días de estudio:
   - ${upcomingDays}
 
-STUDIO DETAILS:
-- Address: ${STUDIO_INFO.address}
-- Parking: ${STUDIO_INFO.parkingInfo}
-- Hours: ${hoursSummary}
-- Buffer Between Shoots: ${STUDIO_INFO.bufferMinutes} minutes
-- Cancellation Policy: ${STUDIO_INFO.cancellationPolicy}
-- Turnaround Time: ${STUDIO_INFO.turnaroundPolicy}
-- Wardrobe Advice: ${STUDIO_INFO.wardrobeTips}
+DETALLES DEL ESTUDIO JUNTOSXSIEMPRE:
+- Nombre: ${STUDIO_INFO.name}
+- Lema: ${STUDIO_INFO.tagline}
+- Dirección: ${STUDIO_INFO.address}
+- Estacionamiento: ${STUDIO_INFO.parkingInfo}
+- Horarios de servicio: ${hoursSummary}
+- Tiempo de transición/buffer entre sesiones: ${STUDIO_INFO.bufferMinutes} minutos
+- Política de cancelación: ${STUDIO_INFO.cancellationPolicy}
+- Tiempos de entrega: ${STUDIO_INFO.turnaroundPolicy}
+- Consejos de vestuario: ${STUDIO_INFO.wardrobeTips}
 
-PHOTOGRAPHY PACKAGES:
+PAQUETES FOTOGRÁFICOS:
   ${servicesSummary}
 
-OPTIONAL STUDIO ADD-ONS:
+COMPLEMENTOS OPCIONALES (ADD-ONS):
   ${addOnsSummary}
 
-STUDIO PHOTOGRAPHERS & SUITES:
+EQUIPO DE FOTÓGRAFOS Y SETS:
   ${photographersSummary}
 
-AVAILABLE BACKDROPS:
+FONDOS DISPONIBLES:
   - ${STUDIO_BACKDROPS.join("\n  - ")}
 
-STRICT OPERATING RULES:
-1. ALWAYS use \`checkAvailableBookings\` or \`getAvailableSlots\` to retrieve real-time calendar availability before quoting any open appointment times. Never guess, invent, or assume availability.
-2. Use \`calculateSessionQuote\` whenever a client asks for a price estimate involving add-ons (like hair & makeup, extra retouched photos, rush delivery, styling, or reels) or extra participants.
-3. Use \`getStudioTeamAndSpaces\` when a client asks about photographers, studio rooms, lighting gear, or backdrops.
-4. Use \`updateAppointmentDetails\` when a client wants to add an upgrade/add-on, assign a preferred photographer, update participant count, or add special notes to an existing booking.
-5. Use \`sendPrepGuideAndDepositLink\` when a client asks for a pre-shoot prep guide, wardrobe checklist, parking instructions, or deposit payment link for their booking.
-6. Use \`joinWaitlist\` when a client's preferred date/time is booked or they ask to be notified if a slot opens up.
-7. Keep responses warm, concise, and SMS-friendly (2–4 short paragraphs max, using clear bullet points).
-8. To complete a booking with \`bookAppointment\`, make sure you have:
-   - Session type (\`serviceId\`)
-   - Date (\`YYYY-MM-DD\`) and start time (\`HH:mm\`)
-   - Client's full name (\`clientName\`) and email (\`clientEmail\`)
-   - Client's phone number (\`clientPhone\` — default to ${clientPhone} if they are texting from it and haven't given another)
-9. When a booking succeeds, always include the Booking Reference Code (e.g. \`LUM-xxxx\`), date/time, package name, and studio address.
-10. For rescheduling, updating, or cancelling, use \`getAppointment\` first if the client didn't provide their \`LUM-xxxx\` booking reference.`;
+REGLAS ESTRICTAS DE OPERACIÓN:
+1. SIEMPRE usa \`checkAvailableBookings\` o \`getAvailableSlots\` para consultar la agenda en tiempo real antes de proponer fechas u horarios libres. NUNCA inventes o asumas disponibilidad.
+2. Usa \`calculateSessionQuote\` cada vez que un cliente pida una cotización con complementos (maquillaje, fotos extra, entrega express 24h, video reel, vestuario) o personas adicionales.
+3. Usa \`getStudioTeamAndSpaces\` cuando pregunten por los fotógrafos (Sofía, Mateo, Valentina), sets en Roma Norte, equipo Profoto o fondos disponibles.
+4. Usa \`updateAppointmentDetails\` cuando el cliente quiera agregar un complemento, cambiar de fotógrafo, agregar notas o participantes a una cita ya existente.
+5. Usa \`sendPrepGuideAndDepositLink\` cuando soliciten la guía de preparación de vestuario, información del estacionamiento o enlace para pagar su anticipo.
+6. Usa \`joinWaitlist\` si el horario o fecha que el cliente busca ya está reservado.
+7. Mantén mensajes cálidos, claros y concisos (2 a 4 párrafos cortos o viñetas amigables para lectura rápida en celular).
+8. Para confirmar una cita con \`bookAppointment\`, asegúrate de tener:
+   - Paquete (\`serviceId\`)
+   - Fecha (\`YYYY-MM-DD\`) y hora (\`HH:mm\`)
+   - Nombre completo (\`clientName\`) y correo (\`clientEmail\`)
+   - Teléfono (\`clientPhone\` — si no especifica otro, usa ${clientPhone})
+9. Cuando una reserva se confirme, proporciona siempre el Código de Reservación (ej. \`JXS-xxxx\`), fecha y hora, nombre de la sesión y dirección del estudio.
+10. Para reprogramar, actualizar o cancelar, si el cliente no proporciona su código de reservación, consulta primero con \`getAppointment\`.`;
 }
 
 export function resolveProviderSetup(config?: RuntimeProviderConfig): {
@@ -209,7 +211,7 @@ export function resolveProviderSetup(config?: RuntimeProviderConfig): {
         openrouterConfigured
       ) {
         fallbackTriggered = true;
-        fallbackReason = "Gemini API key not set; automatically routed to OpenRouter.";
+        fallbackReason = "Gemini API key no configurada; enrutado automáticamente a OpenRouter.";
         activeName = "OpenRouter (Auto-Failover)";
       } else if (
         mode === "openrouter-with-fallback" &&
@@ -217,7 +219,7 @@ export function resolveProviderSetup(config?: RuntimeProviderConfig): {
         geminiConfigured
       ) {
         fallbackTriggered = true;
-        fallbackReason = "OpenRouter API key not set; automatically routed to Google Gemini.";
+        fallbackReason = "OpenRouter API key no configurada; enrutado automáticamente a Google Gemini.";
         activeName = "Google Gemini (Auto-Failover)";
       }
       return {
@@ -230,8 +232,8 @@ export function resolveProviderSetup(config?: RuntimeProviderConfig): {
 }
 
 /**
- * Smart Local Deterministic Coordinator used when neither GEMINI_API_KEY nor OPENROUTER_API_KEY
- * is configured yet, ensuring the pilot works 100% interactively out of the box on local & Vercel.
+ * Coordinador inteligente local determinístico para juntosxsiempre cuando no hay
+ * API keys configuradas, permitiendo que la app funcione 100% interactiva de inmediato.
  */
 async function runSmartLocalDemoCoordinator(
   userMessage: string,
@@ -262,42 +264,43 @@ async function runSmartLocalDemoCoordinator(
     return result as Record<string, any>;
   };
 
-  // 1. Check for Cancel intent
-  const refMatch = userMessage.match(/\b(LUM-\d{4})\b/i);
-  if (lower.includes("cancel")) {
+  const refMatch = userMessage.match(/\b(JXS-\d{4}|LUM-\d{4})\b/i);
+
+  // 1. Cancelación
+  if (lower.includes("cancel") || lower.includes("cancelar") || lower.includes("cancelacion")) {
     const query = refMatch ? refMatch[1].toUpperCase() : clientPhone;
     const lookup = await callTool("getAppointment", { query });
     if (lookup.found && lookup.appointments?.length > 0) {
       const target = lookup.appointments[0];
       const cancelled = await callTool("cancelAppointment", {
         bookingRef: target.bookingRef,
-        reason: "Client requested cancellation via SMS",
+        reason: "Cliente solicitó cancelación vía mensaje",
       });
       if (cancelled.success) {
         const waitlistNote =
           cancelled.waitlistAutoNotified?.length > 0
-            ? `\n\n🔔 We also automatically notified ${cancelled.waitlistAutoNotified.length} waitlisted client(s) (${cancelled.waitlistAutoNotified.map((w: { clientName: string }) => w.clientName).join(", ")}) that this slot opened up.`
+            ? `\n\n🔔 Notificamos automáticamente a ${cancelled.waitlistAutoNotified.length} persona(s) en lista de espera (${cancelled.waitlistAutoNotified.map((w: { clientName: string }) => w.clientName).join(", ")}) que este horario quedó libre.`
             : "";
         return {
-          reply: `Got it! I've cancelled your ${target.serviceName} appointment (${target.bookingRef}) scheduled for ${target.prettyDate} at ${target.timeLabel}. Your slot has been released.${waitlistNote} Let me know anytime you'd like to book a new shoot!`,
+          reply: `¡Entendido! He cancelado tu cita para ${target.serviceName} (${target.bookingRef}) programada para el ${target.prettyDate} a las ${target.timeLabel}. Tu espacio ha sido liberado.${waitlistNote} ¡Con gusto te ayudamos a reagendar cuando desees!`,
           toolExecutions,
         };
       }
     }
     return {
-      reply: `I'd be happy to help cancel your session. Could you share your booking reference code (e.g., LUM-2041) or the phone number/email used when booking?`,
+      reply: `Con gusto te apoyo a cancelar tu sesión. ¿Me compartes tu código de reservación (ej. JXS-2041) o el número celular o correo con el que agendaste?`,
       toolExecutions,
     };
   }
 
-  // 2. Check for Reschedule intent
-  if (lower.includes("reschedule") || lower.includes("move my")) {
-    const query = refMatch ? refMatch[1].toUpperCase() : "LUM-2041";
+  // 2. Reprogramación
+  if (lower.includes("reschedule") || lower.includes("reprogramar") || lower.includes("cambiar fecha") || lower.includes("mover")) {
+    const query = refMatch ? refMatch[1].toUpperCase() : "JXS-2041";
     const lookup = await callTool("getAppointment", { query });
     if (lookup.found && lookup.appointments?.length > 0) {
       const target = lookup.appointments[0];
       const newDate = openDates[1] || openDates[0];
-      const timeMatch = userMessage.match(/\b(\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i);
+      const timeMatch = userMessage.match(/\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i);
       const newStartTime = timeMatch ? timeMatch[1] : "15:00";
 
       const resched = await callTool("rescheduleAppointment", {
@@ -308,22 +311,26 @@ async function runSmartLocalDemoCoordinator(
 
       if (resched.success) {
         return {
-          reply: `All set! Your ${resched.appointment.serviceName} (${resched.appointment.bookingRef}) has been moved to ${resched.appointment.prettyDate} at ${resched.appointment.time}. We'll see you at ${STUDIO_INFO.address}!`,
+          reply: `¡Listo! Tu ${resched.appointment.serviceName} (${resched.appointment.bookingRef}) quedó reprogramada para el ${resched.appointment.prettyDate} a las ${resched.appointment.time}. ¡Nos vemos en ${STUDIO_INFO.address}!`,
           toolExecutions,
         };
       }
     }
   }
 
-  // 2b. Check for Prep Guide & Deposit Link intent
+  // 2b. Guía de preparación y enlace de anticipo
   if (
     lower.includes("prep") ||
-    lower.includes("checklist") ||
-    lower.includes("what to wear") ||
-    lower.includes("wardrobe") ||
-    lower.includes("deposit link")
+    lower.includes("guia") ||
+    lower.includes("guía") ||
+    lower.includes("ropa") ||
+    lower.includes("vestuario") ||
+    lower.includes("anticipo") ||
+    lower.includes("deposito") ||
+    lower.includes("depósito") ||
+    lower.includes("checklist")
   ) {
-    const targetRef = refMatch ? refMatch[1].toUpperCase() : "LUM-2055";
+    const targetRef = refMatch ? refMatch[1].toUpperCase() : "JXS-2055";
     const prep = await callTool("sendPrepGuideAndDepositLink", { bookingRef: targetRef });
     if (prep.success) {
       const checklistBullets = (prep.prepChecklist || [])
@@ -331,23 +338,25 @@ async function runSmartLocalDemoCoordinator(
         .map((c: string) => `• ${c}`)
         .join("\n");
       return {
-        reply: `I've dispatched the **Prep Guide & Deposit Link** for **${prep.bookingRef}** (${prep.clientName})! 📋✨\n\n**Key Prep Tips:**\n${checklistBullets}\n\n💳 **Deposit Link (${prep.depositAmount}):** ${prep.depositPaymentUrl}`,
+        reply: `¡Te envié la **Guía de Preparación & Enlace de Anticipo** para **${prep.bookingRef}** (${prep.clientName})! 📋🌸\n\n**Recomendaciones para tu sesión:**\n${checklistBullets}\n\n💳 **Enlace de Anticipo (${prep.depositAmount}):** ${prep.depositPaymentUrl}`,
         toolExecutions,
       };
     }
   }
 
-  // 2c. Check for Update Existing Appointment Details (add-ons, photographer, notes)
+  // 2c. Actualizar detalles de cita (complementos, fotógrafo, notas)
   if (
     refMatch &&
-    (lower.includes("add ") ||
+    (lower.includes("agregar") ||
       lower.includes("upgrade") ||
-      lower.includes("update") ||
-      lower.includes("backdrop") ||
-      lower.includes("photographer") ||
-      lower.includes("retouch") ||
-      lower.includes("makeup") ||
-      lower.includes("rush"))
+      lower.includes("maquillaje") ||
+      lower.includes("peinado") ||
+      lower.includes("fondo") ||
+      lower.includes("fotografo") ||
+      lower.includes("fotógrafo") ||
+      lower.includes("reel") ||
+      lower.includes("sofia") ||
+      lower.includes("mateo"))
   ) {
     const bookingRef = refMatch[1].toUpperCase();
     const matchedAddOns = findStudioAddOns(userMessage).map((a) => a.id).join(",");
@@ -361,146 +370,153 @@ async function runSmartLocalDemoCoordinator(
     if (updated.success && updated.appointment) {
       const apt = updated.appointment;
       return {
-        reply: `Updated booking **${apt.bookingRef}** (${apt.serviceName})! ✨\n• **Photographer**: ${apt.photographerName}\n• **Add-Ons**: ${(apt.addOns || []).join(", ") || "None"}\n• **Updated Total**: $${apt.price}\n• **Notes**: ${apt.notes}`,
+        reply: `¡Actualizamos tu reservación **${apt.bookingRef}** (${apt.serviceName})! ✨\n• **Fotógrafo**: ${apt.photographerName}\n• **Complementos**: ${(apt.addOns || []).join(", ") || "Ninguno"}\n• **Total Actualizado**: $${apt.price.toLocaleString("es-MX")} MXN\n• **Notas**: ${apt.notes}`,
         toolExecutions,
       };
     }
   }
 
-  // 2d. Check for Custom Quote + Add-Ons intent
+  // 2d. Cotización personalizada + Complementos
   if (
+    lower.includes("cotizar") ||
+    lower.includes("cotizacion") ||
+    lower.includes("cotización") ||
     lower.includes("quote") ||
-    lower.includes("estimate") ||
-    lower.includes("add-on") ||
-    lower.includes("addon") ||
-    lower.includes("hair") ||
-    lower.includes("makeup") ||
-    lower.includes("rush") ||
-    lower.includes("reel")
+    lower.includes("cuanto cuesta") ||
+    lower.includes("cuánto cuesta") ||
+    lower.includes("maquillaje") ||
+    lower.includes("reel") ||
+    lower.includes("complemento") ||
+    lower.includes("addon")
   ) {
-    const svc = findStudioService(userMessage) || STUDIO_SERVICES[1];
+    const svc = findStudioService(userMessage) || STUDIO_SERVICES[0];
     const addOns = findStudioAddOns(userMessage);
     const addOnsStr =
-      addOns.length > 0 ? addOns.map((a) => a.id).join(",") : "hair-makeup,rush-delivery";
+      addOns.length > 0 ? addOns.map((a) => a.id).join(",") : "maquillaje-peinado,entrega-express";
     const quoteRes = await callTool("calculateSessionQuote", {
       serviceId: svc.id,
       addOns: addOnsStr,
-      participants: 1,
+      participants: svc.maxParticipants,
     });
     if (quoteRes.quoteSummary) {
       const addonLines = (quoteRes.selectedAddOns || [])
-        .map((a: { name: string; price: number }) => `• +$${a.price} — ${a.name}`)
+        .map((a: { name: string; price: number }) => `• +$${a.price.toLocaleString("es-MX")} MXN — ${a.name}`)
         .join("\n");
       return {
-        reply: `Here is your itemized studio quote for the **${quoteRes.package.name}**:\n\n• **Base Package**: $${quoteRes.package.basePrice} (${quoteRes.package.baseDurationMinutes} mins)\n${addonLines}\n\n💰 **Estimated Total**: **${quoteRes.quoteSummary.totalPrice}** (${quoteRes.quoteSummary.estimatedTotalTimeMinutes} mins total)\n• **Deposit Due to Book**: ${quoteRes.quoteSummary.depositRequiredToBook}\n• **Balance Due at Shoot**: ${quoteRes.quoteSummary.remainingBalanceAtSession}\n\nWould you like me to check open dates for this setup?`,
+        reply: `Aquí tienes tu cotización personalizada para **${quoteRes.package.name}** en juntosxsiempre:\n\n• **Paquete Base**: $${quoteRes.package.basePrice.toLocaleString("es-MX")} MXN (${quoteRes.package.baseDurationMinutes} mins)\n${addonLines}\n\n🌸 **Total Estimado**: **${quoteRes.quoteSummary.totalPrice}** (${quoteRes.quoteSummary.estimatedTotalTimeMinutes} mins totales)\n• **Anticipo para reservar**: ${quoteRes.quoteSummary.depositRequiredToBook}\n• **Saldo en el estudio**: ${quoteRes.quoteSummary.remainingBalanceAtSession}\n\n¿Te gustaría que te muestre los horarios disponibles para esta sesión?`,
         toolExecutions,
       };
     }
   }
 
-  // 2e. Check for Studio Team, Photographers, Backdrops, or Lighting Gear intent
+  // 2e. Equipo de fotógrafos, sets, cámaras o fondos
   if (
-    lower.includes("photographer") ||
-    lower.includes("who shoots") ||
-    lower.includes("team") ||
-    lower.includes("backdrop") ||
-    lower.includes("equipment") ||
-    lower.includes("lighting") ||
-    lower.includes("elena") ||
-    lower.includes("marcus") ||
-    lower.includes("sofia")
+    lower.includes("fotografo") ||
+    lower.includes("fotógrafo") ||
+    lower.includes("equipo") ||
+    lower.includes("quien toma") ||
+    lower.includes("quién toma") ||
+    lower.includes("sets") ||
+    lower.includes("fondos") ||
+    lower.includes("backdrops") ||
+    lower.includes("sofia") ||
+    lower.includes("sofía") ||
+    lower.includes("mateo") ||
+    lower.includes("valentina")
   ) {
     const teamData = await callTool("getStudioTeamAndSpaces", {});
     const photogBullets = (teamData.photographers || [])
       .map(
         (p: { name: string; role: string; assignedRoom: string; specialties: string[] }) =>
-          `• **${p.name}** (${p.role} • ${p.assignedRoom}) — *${p.specialties.join(", ")}*`,
+          `• **${p.name}** (${p.role} • ${p.assignedRoom})\n  *Especialidades: ${p.specialties.join(", ")}*`,
       )
       .join("\n");
     const backdropSample = (teamData.backdropsAvailable || []).slice(0, 4).join(", ");
     return {
-      reply: `Meet our creative team and studio spaces at **${STUDIO_INFO.name}**:\n\n${photogBullets}\n\n🎨 **Available Backdrops**: ${backdropSample}\n\nYou can request any photographer or backdrop when booking!`,
+      reply: `¡Conoce a nuestro equipo creativo y sets en **${STUDIO_INFO.name}**! 📸✨\n\n${photogBullets}\n\n🎨 **Fondos Disponibles**: ${backdropSample}\n\n¡Puedes solicitar a tu fotógrafo de preferencia al agendar tu cita!`,
       toolExecutions,
     };
   }
 
-  // 2f. Check for Priority Waitlist intent
+  // 2f. Lista de espera prioritaria
   if (
+    lower.includes("espera") ||
     lower.includes("waitlist") ||
-    lower.includes("wait list") ||
-    lower.includes("notify me if") ||
-    lower.includes("if a slot opens")
+    lower.includes("avisame") ||
+    lower.includes("avísame") ||
+    lower.includes("si se abre") ||
+    lower.includes("si se cancela")
   ) {
     const svc = findStudioService(userMessage) || STUDIO_SERVICES[0];
     const emailMatchWl = userMessage.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
     const dateMatchWl = userMessage.match(/\b(202\d-\d{2}-\d{2})\b/);
-    let clientName = "Alex Kim";
+    let clientName = "Lucía Morales";
     const nameMatch =
-      userMessage.match(/(?:name is|for|i'm|i am)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
+      userMessage.match(/(?:nombre es|soy|me llamo|para)\s+([A-ZÁÉÍÓÚa-záéíóú]+(?:\s+[A-ZÁÉÍÓÚa-záéíóú]+)?)/i);
     if (nameMatch?.[1]) {
       clientName = nameMatch[1].trim();
     }
     const wlRes = await callTool("joinWaitlist", {
       clientName,
       clientPhone,
-      clientEmail: emailMatchWl ? emailMatchWl[1] : "alex@kim.co",
+      clientEmail: emailMatchWl ? emailMatchWl[1] : "lucia@ejemplo.mx",
       serviceId: svc.id,
       preferredDate: dateMatchWl ? dateMatchWl[1] : openDates[0],
-      preferredTimeWindow: lower.includes("morning")
-        ? "Morning (9 AM - 12 PM)"
-        : lower.includes("afternoon")
-          ? "Afternoon (12 PM - 4 PM)"
-          : "Anytime",
-      notes: "Requested via SMS Schedule Agent",
+      preferredTimeWindow: lower.includes("mañana")
+        ? "Mañana (9 AM - 12 PM)"
+        : lower.includes("tarde")
+          ? "Tarde (12 PM - 4 PM)"
+          : "Cualquier horario disponible",
+      notes: "Solicitud vía SMS / WhatsApp juntosxsiempre",
     });
     if (wlRes.success) {
       const w = wlRes.waitlistEntry;
       return {
-        reply: `You're on our Priority Waitlist! 🔔\n\n• **Waitlist Ref**: ${w.waitlistRef}\n• **Session**: ${w.serviceName}\n• **Preferred Date**: ${formatPrettyDate(w.preferredDate)} (${w.preferredTimeWindow})\n• **Client**: ${w.clientName}\n\nIf a slot opens up on ${formatPrettyDate(w.preferredDate)}, we'll text you immediately with a 1-tap booking link!`,
+        reply: `¡Ya estás en nuestra Lista de Espera Prioritaria! 🔔🌸\n\n• **Ref de Espera**: ${w.waitlistRef}\n• **Sesión**: ${w.serviceName}\n• **Fecha Preferida**: ${formatPrettyDate(w.preferredDate)} (${w.preferredTimeWindow})\n• **Cliente**: ${w.clientName}\n\nSi se abre un espacio para el ${formatPrettyDate(w.preferredDate)}, te enviaremos de inmediato un mensaje para confirmarlo en 1 tap.`,
         toolExecutions,
       };
     }
   }
 
-  // 3. Check for Lookup / Status intent
+  // 3. Consulta de estatus de cita
   if (
-    lower.includes("my booking") ||
-    lower.includes("my appointment") ||
-    lower.includes("check status") ||
-    (refMatch && !lower.includes("book"))
+    lower.includes("mi cita") ||
+    lower.includes("mi reservacion") ||
+    lower.includes("mi reservación") ||
+    lower.includes("consultar") ||
+    (refMatch && !lower.includes("agendar") && !lower.includes("reservar"))
   ) {
-    const query = refMatch ? refMatch[1].toUpperCase() : "Elena";
+    const query = refMatch ? refMatch[1].toUpperCase() : "Mariana";
     const lookup = await callTool("getAppointment", { query });
     if (lookup.found && lookup.appointments?.length > 0) {
       const apt = lookup.appointments[0];
       return {
-        reply: `Here are the details for booking **${apt.bookingRef}**:\n• **Client**: ${apt.clientName}\n• **Package**: ${apt.serviceName}\n• **When**: ${apt.prettyDate} (${apt.timeLabel})\n• **Status**: ${apt.status.toUpperCase()}\n\nReply if you'd like to reschedule or cancel!`,
+        reply: `Aquí están los detalles de tu reservación **${apt.bookingRef}** en juntosxsiempre:\n• **Cliente**: ${apt.clientName}\n• **Sesión**: ${apt.serviceName}\n• **Fecha**: ${apt.prettyDate} (${apt.timeLabel})\n• **Fotógrafo**: ${apt.photographerName}\n• **Estatus**: ${apt.status.toUpperCase()}\n\n¡Respóndeme si necesitas reprogramar, agregar complementos o cancelar!`,
         toolExecutions,
       };
     }
   }
 
-  // 4. Check for explicit booking confirmation details (email present or "book it" / "confirm")
+  // 4. Agendar y confirmar reserva
   const emailMatch = userMessage.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
   const dateMatch = userMessage.match(/\b(202\d-\d{2}-\d{2})\b/);
-  const timeMatch = userMessage.match(/\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)|\d{2}:\d{2})\b/i);
+  const timeMatch = userMessage.match(/\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)?|\d{2}:\d{2})\b/i);
 
-  if (emailMatch || (lower.includes("book") && timeMatch)) {
+  if (emailMatch || (lower.includes("agendar") && (timeMatch || dateMatch)) || lower.includes("reservar")) {
     const combinedContext = [...history.map((h) => String(h.content)), userMessage].join(" ");
     const service = findStudioService(combinedContext) || STUDIO_SERVICES[0];
     const targetDate = dateMatch ? dateMatch[1] : openDates[0];
-    const targetTime = timeMatch ? timeMatch[1] : "11:00";
+    const targetTime = timeMatch ? timeMatch[1] : "11:30";
 
-    // Extract name before email or after "for " / "name is "
-    let clientName = "Jordan Taylor";
+    let clientName = "Fernanda Castillo";
     const nameMatch =
-      userMessage.match(/(?:name is|for|i'm|i am)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i) ||
-      userMessage.match(/^([A-Z][a-z]+\s+[A-Z][a-z]+)[,\s]/);
+      userMessage.match(/(?:nombre es|me llamo|soy|para)\s+([A-ZÁÉÍÓÚa-záéíóú]+(?:\s+[A-ZÁÉÍÓÚa-záéíóú]+)?)/i) ||
+      userMessage.match(/^([A-ZÁÉÍÓÚa-záéíóú]+\s+[A-ZÁÉÍÓÚa-záéíóú]+)[,\s]/);
     if (nameMatch?.[1]) {
       clientName = nameMatch[1].trim();
     }
 
-    const clientEmail = emailMatch ? emailMatch[1] : "jordan.taylor@example.com";
+    const clientEmail = emailMatch ? emailMatch[1] : "fernanda.castillo@gmail.com";
 
     const bookingResult = await callTool("bookAppointment", {
       clientName,
@@ -509,14 +525,14 @@ async function runSmartLocalDemoCoordinator(
       serviceId: service.id,
       date: targetDate,
       startTime: targetTime,
-      participants: service.id === "family-maternity" ? 4 : 1,
-      notes: "Booked via SMS Schedule Agent",
+      participants: service.maxParticipants,
+      notes: "Agendado vía Coordinadora SMS juntosxsiempre",
     });
 
     if (bookingResult.success) {
       const apt = bookingResult.appointment;
       return {
-        reply: `You're officially booked at ${STUDIO_INFO.name}! 📸\n\n• **Booking Ref**: ${apt.bookingRef}\n• **Session**: ${apt.serviceName}\n• **Date & Time**: ${apt.prettyDate} at ${apt.time}\n• **Client**: ${apt.clientName} (${apt.clientEmail})\n• **Location**: ${apt.studioAddress}\n\nWe've sent a calendar invite to ${apt.clientEmail}. Let me know if you need wardrobe tips or need to make any changes!`,
+        reply: `¡Tu cita en **${STUDIO_INFO.name}** está oficialmente confirmada! 📸🌸\n\n• **Código de Reserva**: ${apt.bookingRef}\n• **Sesión**: ${apt.serviceName}\n• **Fecha y Horario**: ${apt.prettyDate} a las ${apt.time}\n• **Cliente**: ${apt.clientName} (${apt.clientEmail})\n• **Fotógrafo**: ${apt.photographerName}\n• **Ubicación**: ${apt.studioAddress}\n\nTe enviamos un correo con los detalles y el enlace para tu anticipo de ${apt.depositRequired}. ¡Cualquier duda sobre tu vestuario o llegada, aquí estoy para ayudarte!`,
         toolExecutions,
       };
     } else {
@@ -524,48 +540,48 @@ async function runSmartLocalDemoCoordinator(
         .map((a: { label: string }) => `• ${a.label}`)
         .join("\n");
       return {
-        reply: `That time wasn't open (${bookingResult.error}). Here are open slots on that day:\n${alts || "Please check our next open studio day."}\n\nWhich of these works best for you?`,
+        reply: `Ese horario no estaba disponible (${bookingResult.error}). Te comparto los espacios abiertos para ese día:\n${alts || "Por favor consulta nuestro siguiente día de apertura."}\n\n¿Cuál de estos te acomoda mejor?`,
         toolExecutions,
       };
     }
   }
 
-  // 5. Check for Pricing / Packages / FAQ
+  // 5. Precios / Paquetes / Información general
   if (
+    lower.includes("precio") ||
+    lower.includes("paquete") ||
+    lower.includes("servicio") ||
+    lower.includes("costo") ||
+    lower.includes("planes") ||
     lower.includes("price") ||
-    lower.includes("pricing") ||
-    lower.includes("package") ||
-    lower.includes("service") ||
-    lower.includes("cost") ||
-    lower.includes("how much")
+    lower.includes("packages")
   ) {
     const catalog = await callTool("getStudioServices", { category: "all" });
     const list = (catalog.services || [])
       .map(
         (s: { name: string; durationMinutes: number; price: number }) =>
-          `• **${s.name}** (${s.durationMinutes}m) — $${s.price}`,
+          `• **${s.name}** (${s.durationMinutes}m) — $${s.price.toLocaleString("es-MX")} MXN`,
       )
       .join("\n");
     return {
-      reply: `Hi! I'm ${STUDIO_INFO.coordinatorName} at ${STUDIO_INFO.name}. Here are our photography packages:\n\n${list}\n\nWe're open Tue–Fri (9 AM–6 PM) and Sat (10 AM–5 PM). Which session type would you like to check availability for?`,
+      reply: `¡Hola! Soy ${STUDIO_INFO.coordinatorName} de **${STUDIO_INFO.name}** en Roma Norte, CDMX. Te comparto nuestros paquetes fotográficos:\n\n${list}\n\nAbrimos de martes a viernes (9:00 AM–6:00 PM) y sábados (10:00 AM–5:00 PM). ¿Para qué tipo de sesión te gustaría consultar fechas disponibles?`,
       toolExecutions,
     };
   }
 
-  // 6. Default / Availability Intent: Check available bookings for requested service
+  // 6. Disponibilidad por defecto (consulta de horarios para el paquete seleccionado o solicitado)
   const matchedService = findStudioService(userMessage) || STUDIO_SERVICES[0];
   let targetStartDate = openDates[0];
-  if (lower.includes("saturday") || lower.includes("weekend")) {
-    const sat = openDates.find((d) => formatPrettyDate(d).toLowerCase().startsWith("sat"));
+  if (lower.includes("sabado") || lower.includes("sábado") || lower.includes("fin de semana")) {
+    const sat = openDates.find((d) => formatPrettyDate(d).toLowerCase().startsWith("sáb"));
     if (sat) targetStartDate = sat;
   } else if (dateMatch) {
     targetStartDate = dateMatch[1];
   }
 
   let timePref = "any";
-  if (lower.includes("morning")) timePref = "morning";
-  else if (lower.includes("afternoon")) timePref = "afternoon";
-  else if (lower.includes("evening") || lower.includes("late")) timePref = "late";
+  if (lower.includes("mañana") || lower.includes("morning")) timePref = "morning";
+  else if (lower.includes("tarde") || lower.includes("afternoon")) timePref = "afternoon";
 
   const slotsData = await callTool("checkAvailableBookings", {
     date: targetStartDate,
@@ -596,7 +612,7 @@ async function runSmartLocalDemoCoordinator(
     .join("\n");
 
   return {
-    reply: `Hi there! I retrieved our open calendar slots for the **${matchedService.name}** (${matchedService.durationMinutes} mins, $${matchedService.price}):\n\n${slotBullets}\n\nTo reserve your session, reply with your preferred **date & time**, **full name**, and **email address**!`,
+    reply: `¡Hola! Con gusto te comparto los horarios abiertos para la **${matchedService.name}** (${matchedService.durationMinutes} mins, $${matchedService.price.toLocaleString("es-MX")} MXN):\n\n${slotBullets}\n\nPara apartar tu fecha, respóndeme con el **día y hora deseados**, tu **nombre completo** y **correo electrónico**. ¡Te reservo al momento! 🌸`,
     toolExecutions,
   };
 }
@@ -638,12 +654,10 @@ export async function processScheduleAgentTurn(params: {
       const activityLog = agent.getActivityLog();
       const updatedHistory = await agent.getChatHistory();
 
-      // Check if ChatAgent caught an internal error and returned "Error processing chat message: ..."
       if (reply.startsWith("Error processing chat message:")) {
         throw new Error(reply);
       }
 
-      // Extract tool executions in sequence from activityLog
       const toolExecutions: ToolExecutionRecord[] = [];
       let lastStartArgs: Record<string, unknown> = {};
 
@@ -705,9 +719,9 @@ export async function processScheduleAgentTurn(params: {
         telemetry: {
           configuredMode: setup.configuredMode,
           primaryProvider: setup.primaryId,
-          activeProvider: "Smart Local Coordinator (Offline Failover)",
+          activeProvider: "Coordinador Local Inteligente (Failover Offline)",
           fallbackTriggered: true,
-          fallbackReason: `Live provider error: ${errMsg}`,
+          fallbackReason: `Error en proveedor en vivo: ${errMsg}`,
           latencyMs: Date.now() - startTime,
           usingDemoFallback: true,
           geminiConfigured: setup.geminiConfigured,
@@ -717,7 +731,7 @@ export async function processScheduleAgentTurn(params: {
     }
   }
 
-  // Neither API key configured yet — use Smart Local Coordinator seamlessly
+  // Sin llaves de API configuradas: usa el Coordinador Inteligente Local Determinístico
   const demoResult = await runSmartLocalDemoCoordinator(
     params.userMessage,
     params.history,
@@ -737,10 +751,10 @@ export async function processScheduleAgentTurn(params: {
     telemetry: {
       configuredMode: setup.configuredMode,
       primaryProvider: setup.primaryId,
-      activeProvider: "Smart Local Coordinator (Add API Key for Live LLM)",
+      activeProvider: "Coordinador Local Inteligente (Motor juntosxsiempre)",
       fallbackTriggered: false,
       fallbackReason:
-        "No GEMINI_API_KEY or OPENROUTER_API_KEY detected; running built-in deterministic studio tool engine.",
+        "No se detectó GEMINI_API_KEY ni OPENROUTER_API_KEY; ejecutando el motor determinístico de citas de juntosxsiempre.",
       latencyMs: Date.now() - startTime,
       usingDemoFallback: true,
       geminiConfigured: setup.geminiConfigured,

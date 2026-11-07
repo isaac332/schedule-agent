@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     };
 
     const sessionId = body.sessionId || "default-web-sms-session";
-    const clientPhone = body.clientPhone || "(555) 019-2834";
+    const clientPhone = body.clientPhone || "+52 55 4910 2831";
 
     if (!body.resetSession) {
       syncStoreFromClient({

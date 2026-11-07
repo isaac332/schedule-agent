@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   await connection();
   const { searchParams } = new URL(request.url);
   const dateParam = searchParams.get("date");
-  const serviceId = searchParams.get("serviceId") || "headshot-express";
+  const serviceId = searchParams.get("serviceId") || "pareja-juntos";
 
   const todayStr = formatLocalDate(new Date());
   const nextOpen = getNextOpenStudioDates(todayStr, 6);
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     const clientName = (body.clientName || "").trim();
     const clientPhone = (body.clientPhone || "").trim();
     const clientEmail = (body.clientEmail || "").trim();
-    const serviceId = body.serviceId || "headshot-express";
+    const serviceId = body.serviceId || "pareja-juntos";
     const date = (body.date || "").trim();
     const startTime = (body.startTime || "").trim();
 
@@ -142,7 +142,7 @@ export async function PATCH(request: Request) {
       const validation = validateAndResolveSlot(
         body.newDate,
         body.newStartTime,
-        body.serviceId || "headshot-express",
+        body.serviceId || "pareja-juntos",
         bookingRef,
       );
       if (!validation.valid || !validation.normalizedStart || !validation.normalizedEnd) {

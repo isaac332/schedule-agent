@@ -16,7 +16,7 @@ interface StoreData {
   initializedAt: string;
 }
 
-const TMP_STORE_PATH = path.join(os.tmpdir(), "lumina-studio-pilot-store-v2.json");
+const TMP_STORE_PATH = path.join(os.tmpdir(), "juntosxsiempre-studio-store-v1.json");
 
 function createSeedAppointments(): Appointment[] {
   const todayStr = formatLocalDate(new Date());
@@ -30,22 +30,22 @@ function createSeedAppointments(): Appointment[] {
   return [
     {
       id: "apt-seed-1",
-      bookingRef: "LUM-2041",
-      clientName: "Elena Rostova",
-      clientPhone: "(555) 391-0482",
-      clientEmail: "elena.rostova@atelier.io",
-      serviceId: "headshot-express",
-      serviceName: "Express Headshot Session",
+      bookingRef: "JXS-2041",
+      clientName: "Mariana & Carlos Rivera",
+      clientPhone: "+52 55 4910 2831",
+      clientEmail: "mariana.rivera@gmail.com",
+      serviceId: "pareja-juntos",
+      serviceName: "Sesión Juntos x Siempre (Parejas & Compromiso)",
       date: d1,
       startTime: "10:00",
-      endTime: "10:30",
-      durationMinutes: 30,
-      price: 149,
-      participants: 1,
-      photographerName: "Marcus Chen",
-      addOns: [],
+      endTime: "11:00",
+      durationMinutes: 60,
+      price: 4000,
+      participants: 2,
+      photographerName: "Sofía Morales",
+      addOns: ["Maquillaje y Peinado Profesional (HMUA)"],
       prepGuideSent: true,
-      notes: "Charcoal and warm bone backdrops for keynote speaker bio.",
+      notes: "Aniversario de novios; set de luz natural con flores secas y fondo rosa pastel.",
       status: "confirmed",
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -53,22 +53,22 @@ function createSeedAppointments(): Appointment[] {
     },
     {
       id: "apt-seed-2",
-      bookingRef: "LUM-2048",
-      clientName: "Marcus & Priya Vance",
-      clientPhone: "(555) 842-1930",
-      clientEmail: "mvance@gmail.com",
-      serviceId: "family-maternity",
-      serviceName: "Family & Maternity Keepsake Session",
+      bookingRef: "JXS-2048",
+      clientName: "Familia Garza Salgado",
+      clientPhone: "+52 55 8123 9044",
+      clientEmail: "valeria.garza@hotmail.com",
+      serviceId: "familia-maternidad",
+      serviceName: "Sesión Familiar & Maternidad Cálida",
       date: d1,
       startTime: "14:00",
       endTime: "15:00",
       durationMinutes: 60,
-      price: 450,
-      participants: 3,
-      photographerName: "Sofia Patel",
-      addOns: ["Professional Hair & Camera-Ready Makeup"],
+      price: 3200,
+      participants: 4,
+      photographerName: "Valentina Ramos",
+      addOns: [],
       prepGuideSent: true,
-      notes: "Maternity + toddler shoot; requesting ivory linen studio wrap.",
+      notes: "Maternidad semana 32 + niña de 3 años; bata blanca de lino.",
       status: "confirmed",
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -76,22 +76,22 @@ function createSeedAppointments(): Appointment[] {
     },
     {
       id: "apt-seed-3",
-      bookingRef: "LUM-2055",
-      clientName: "Devon Brooks",
-      clientPhone: "(555) 619-7741",
-      clientEmail: "devon.brooks@utexas.edu",
-      serviceId: "graduation-senior",
-      serviceName: "Graduation & Milestone Session",
+      bookingRef: "JXS-2055",
+      clientName: "Rodrigo Morales",
+      clientPhone: "+52 55 6712 3490",
+      clientEmail: "rodrigo@moralesarq.mx",
+      serviceId: "retrato-editorial",
+      serviceName: "Retrato Ejecutivo & Personal Branding",
       date: d2,
       startTime: "11:00",
-      endTime: "12:15",
-      durationMinutes: 75,
-      price: 295,
+      endTime: "11:35",
+      durationMinutes: 35,
+      price: 1650,
       participants: 1,
-      photographerName: "Sofia Patel",
+      photographerName: "Mateo Hernández",
       addOns: [],
       prepGuideSent: false,
-      notes: "Bringing architecture portfolio props + regalia.",
+      notes: "Foto de perfil para despacho de arquitectura; fondo cantera y ciclorama.",
       status: "confirmed",
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -99,22 +99,22 @@ function createSeedAppointments(): Appointment[] {
     },
     {
       id: "apt-seed-4",
-      bookingRef: "LUM-2062",
-      clientName: "Solstice Roasters Co.",
-      clientPhone: "(555) 908-3312",
-      clientEmail: "hello@solsticeroasters.com",
-      serviceId: "commercial-brand",
-      serviceName: "Commercial & Personal Brand Story",
+      bookingRef: "JXS-2062",
+      clientName: "Mezcal Artesanal Santo Remedio",
+      clientPhone: "+52 55 9812 7701",
+      clientEmail: "contacto@mezcalsantoremedio.mx",
+      serviceId: "campana-comercial",
+      serviceName: "Producción Comercial & Catálogo de Marca",
       date: d3,
       startTime: "13:00",
       endTime: "15:00",
       durationMinutes: 120,
-      price: 660,
+      price: 6900,
       participants: 3,
-      photographerName: "Elena Vance",
-      addOns: ["Behind-the-Scenes 4K Vertical Social Reel"],
+      photographerName: "Sofía Morales",
+      addOns: ["Video Reel 4K Vertical Detrás de Cámaras"],
       prepGuideSent: true,
-      notes: "Founder portraits + espresso packaging tabletop lighting.",
+      notes: "Bodegón de botellas mezcaleras con textiles oaxaqueños + fotos con barista.",
       status: "confirmed",
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -132,14 +132,14 @@ function createSeedWaitlist(): WaitlistEntry[] {
     {
       id: "wl-seed-1",
       waitlistRef: "WTL-8104",
-      clientName: "Chloe Sterling",
-      clientPhone: "(555) 712-9044",
-      clientEmail: "chloe@sterlingpr.com",
-      serviceId: "headshot-express",
-      serviceName: "Express Headshot Session",
+      clientName: "Lucía Benítez",
+      clientPhone: "+52 55 3419 8820",
+      clientEmail: "lucia.benitez@outlook.com",
+      serviceId: "pareja-juntos",
+      serviceName: "Sesión Juntos x Siempre (Parejas & Compromiso)",
       preferredDate: d1,
-      preferredTimeWindow: "Morning (10:00 AM preferred)",
-      notes: "Hoping for a 10:00 AM slot if one opens up before press release.",
+      preferredTimeWindow: "Mañana (10:00 AM preferido)",
+      notes: "Esperando si se abre un horario matutino para sesión de compromiso.",
       status: "waiting",
       createdAt: new Date().toISOString(),
     },
@@ -147,15 +147,15 @@ function createSeedWaitlist(): WaitlistEntry[] {
 }
 
 declare global {
-  var __LUMINA_STUDIO_STORE__: StoreData | undefined;
+  var __JUNTOSXSIEMPRE_STUDIO_STORE__: StoreData | undefined;
 }
 
 function loadStore(): StoreData {
-  if (globalThis.__LUMINA_STUDIO_STORE__) {
-    if (!Array.isArray(globalThis.__LUMINA_STUDIO_STORE__.waitlist)) {
-      globalThis.__LUMINA_STUDIO_STORE__.waitlist = createSeedWaitlist();
+  if (globalThis.__JUNTOSXSIEMPRE_STUDIO_STORE__) {
+    if (!Array.isArray(globalThis.__JUNTOSXSIEMPRE_STUDIO_STORE__.waitlist)) {
+      globalThis.__JUNTOSXSIEMPRE_STUDIO_STORE__.waitlist = createSeedWaitlist();
     }
-    return globalThis.__LUMINA_STUDIO_STORE__;
+    return globalThis.__JUNTOSXSIEMPRE_STUDIO_STORE__;
   }
 
   try {
@@ -166,7 +166,7 @@ function loadStore(): StoreData {
         if (!Array.isArray(parsed.waitlist)) {
           parsed.waitlist = createSeedWaitlist();
         }
-        globalThis.__LUMINA_STUDIO_STORE__ = parsed;
+        globalThis.__JUNTOSXSIEMPRE_STUDIO_STORE__ = parsed;
         return parsed;
       }
     }
@@ -181,13 +181,13 @@ function loadStore(): StoreData {
     initializedAt: new Date().toISOString(),
   };
 
-  globalThis.__LUMINA_STUDIO_STORE__ = initial;
+  globalThis.__JUNTOSXSIEMPRE_STUDIO_STORE__ = initial;
   persistStore(initial);
   return initial;
 }
 
 function persistStore(store: StoreData): void {
-  globalThis.__LUMINA_STUDIO_STORE__ = store;
+  globalThis.__JUNTOSXSIEMPRE_STUDIO_STORE__ = store;
   try {
     fs.writeFileSync(TMP_STORE_PATH, JSON.stringify(store, null, 2), "utf-8");
   } catch {
@@ -229,7 +229,12 @@ export function findAppointmentByQuery(query: string): Appointment[] {
       apt.bookingRef.toLowerCase().includes(q) ||
       apt.clientName.toLowerCase().includes(q) ||
       apt.clientEmail.toLowerCase().includes(q) ||
-      (digitsOnly.length >= 4 && phoneDigits.includes(digitsOnly))
+      (digitsOnly.length >= 4 && phoneDigits.includes(digitsOnly)) ||
+      // Legacy compatibility LUM-2041 -> JXS-2041
+      (q.includes("2041") && apt.bookingRef.includes("2041")) ||
+      (q.includes("2048") && apt.bookingRef.includes("2048")) ||
+      (q.includes("2055") && apt.bookingRef.includes("2055")) ||
+      (q.includes("2062") && apt.bookingRef.includes("2062"))
     );
   });
 }
@@ -256,7 +261,7 @@ export function createBookingRecord(input: {
     input.photographerName || findPhotographer(service.id).name;
 
   const randomCode = Math.floor(3000 + Math.random() * 6999);
-  const bookingRef = `LUM-${randomCode}`;
+  const bookingRef = `JXS-${randomCode}`;
   const nowIso = new Date().toISOString();
 
   const newApt: Appointment = {
@@ -310,7 +315,7 @@ export function createWaitlistRecord(input: {
     serviceId: service.id,
     serviceName: service.name,
     preferredDate: input.preferredDate,
-    preferredTimeWindow: input.preferredTimeWindow || "Flexible / Any open slot",
+    preferredTimeWindow: input.preferredTimeWindow || "Cualquier horario disponible",
     notes: input.notes?.trim() || "",
     status: "waiting",
     createdAt: new Date().toISOString(),
@@ -345,7 +350,13 @@ export function updateBookingRecord(
   const store = loadStore();
   const q = bookingRefOrId.trim().toLowerCase();
   const idx = store.appointments.findIndex(
-    (a) => a.bookingRef.toLowerCase() === q || a.id.toLowerCase() === q,
+    (a) =>
+      a.bookingRef.toLowerCase() === q ||
+      a.id.toLowerCase() === q ||
+      (q.includes("2041") && a.bookingRef.includes("2041")) ||
+      (q.includes("2048") && a.bookingRef.includes("2048")) ||
+      (q.includes("2055") && a.bookingRef.includes("2055")) ||
+      (q.includes("2062") && a.bookingRef.includes("2062")),
   );
   if (idx === -1) return null;
 
@@ -374,7 +385,7 @@ export function updateBookingRecord(
 
 export function getOrCreateSession(
   sessionId: string,
-  clientPhone: string = "(555) 019-2834",
+  clientPhone: string = "+52 55 8432 9901",
 ): ConversationSession {
   const store = loadStore();
   if (!store.sessions[sessionId]) {
@@ -410,10 +421,6 @@ export function resetDemoStore(): StoreData {
   return fresh;
 }
 
-/**
- * Ensures serverless cold-start instances on Vercel Free Tier stay 100% synchronized
- * with the browser's active demo state before running tools or slot calculations.
- */
 export function syncStoreFromClient(payload: {
   appointments?: Appointment[];
   waitlist?: WaitlistEntry[];
@@ -438,7 +445,7 @@ export function syncStoreFromClient(payload: {
     const existing = store.sessions[payload.sessionId];
     store.sessions[payload.sessionId] = {
       sessionId: payload.sessionId,
-      clientPhone: payload.clientPhone || existing?.clientPhone || "(555) 019-2834",
+      clientPhone: payload.clientPhone || existing?.clientPhone || "+52 55 8432 9901",
       history: payload.history,
       uiMessages: existing?.uiMessages || [],
       updatedAt: new Date().toISOString(),

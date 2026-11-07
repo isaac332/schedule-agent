@@ -12,10 +12,10 @@ import {
 
 export function computeDayAvailability(
   dateStr: string,
-  serviceQueryOrId: string = "portrait-signature",
+  serviceQueryOrId: string = "pareja-juntos",
   excludeBookingRef?: string,
 ): DayAvailability {
-  const service = findStudioService(serviceQueryOrId) || STUDIO_SERVICES[1];
+  const service = findStudioService(serviceQueryOrId) || STUDIO_SERVICES[0];
   const daySched = getDayScheduleForDate(dateStr);
 
   if (!daySched.isOpen) {
@@ -23,7 +23,7 @@ export function computeDayAvailability(
       date: dateStr,
       dayName: daySched.dayName,
       isOpen: false,
-      operatingHours: "Closed",
+      operatingHours: "Cerrado",
       serviceId: service.id,
       serviceName: service.name,
       durationMinutes: service.durationMinutes,
@@ -90,7 +90,7 @@ export function computeDayAvailability(
 export function computeRangeAvailability(
   startDateStr: string,
   daysCount: number = 5,
-  serviceQueryOrId: string = "portrait-signature",
+  serviceQueryOrId: string = "pareja-juntos",
 ): DayAvailability[] {
   const safeDays = Math.min(Math.max(daysCount, 1), 14);
   const results: DayAvailability[] = [];
@@ -115,13 +115,13 @@ export function validateAndResolveSlot(
   normalizedEnd?: string;
   alternatives?: TimeSlot[];
 } {
-  const service = findStudioService(serviceQueryOrId) || STUDIO_SERVICES[1];
+  const service = findStudioService(serviceQueryOrId) || STUDIO_SERVICES[0];
   const dayAvail = computeDayAvailability(dateStr, service.id, excludeBookingRef);
 
   if (!dayAvail.isOpen) {
     return {
       valid: false,
-      reason: `Lumina Studio is closed on ${dayAvail.dayName}s (${dateStr}). We are open Tuesday–Friday 9:00 AM–6:00 PM and Saturday 10:00 AM–5:00 PM.`,
+      reason: `El estudio juntosxsiempre está cerrado los días ${dayAvail.dayName} (${dateStr}). Nuestro horario es de martes a viernes de 9:00 AM a 6:00 PM y sábados de 10:00 AM a 5:00 PM.`,
       alternatives: [],
     };
   }
@@ -137,7 +137,7 @@ export function validateAndResolveSlot(
   if (startMins < openMins || endMins > closeMins) {
     return {
       valid: false,
-      reason: `Requested time ${formatTime12h(normalizedStart)}–${formatTime12h(normalizedEnd)} is outside our ${dayAvail.dayName} operating hours (${dayAvail.operatingHours}).`,
+      reason: `El horario solicitado ${formatTime12h(normalizedStart)}–${formatTime12h(normalizedEnd)} está fuera de nuestro horario de servicio de ${dayAvail.dayName} (${dayAvail.operatingHours}).`,
       alternatives: dayAvail.availableSlots.slice(0, 4),
     };
   }
@@ -156,7 +156,7 @@ export function validateAndResolveSlot(
     if (startMins < bEnd && candidateEndWithBuffer > bStart) {
       return {
         valid: false,
-        reason: `The ${formatTime12h(normalizedStart)} slot conflicts with an existing studio session (${booked.startTime}–${booked.endTime}, plus 15m lighting reset).`,
+        reason: `El horario ${formatTime12h(normalizedStart)} coincide con una sesión ya agendada (${booked.startTime}–${booked.endTime}, con 15m de ajuste y sanitización de sets).`,
         alternatives: dayAvail.availableSlots.slice(0, 4),
       };
     }

@@ -1,30 +1,25 @@
 "use client";
 
-import React, { useCallback, useEffect, useId, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   BellRing,
   Bot,
   Calendar,
   Camera,
   CheckCircle2,
-  ChevronRight,
   Clock,
-  Code2,
   Cpu,
-  DollarSign,
   FileCheck2,
-  KeyRound,
-  Layers,
+  Heart,
+  MapPin,
   MessageSquare,
+  Palette,
   Phone,
   Plus,
   RefreshCw,
   Send,
   Sparkles,
-  Trash2,
-  Users,
   Wrench,
-  XCircle,
 } from "lucide-react";
 import type {
   Appointment,
@@ -47,50 +42,48 @@ const PROVIDER_MODE_LABELS: Record<
 > = {
   "gemini-with-fallback": {
     label: "Gemini → OpenRouter Fallback",
-    badge: "Gemini Primary ⇄ OpenRouter",
+    badge: "Gemini Primario ⇄ OpenRouter",
     shortBadge: "Gemini ⇄ OR",
-    desc: "Uses Google Gemini first; automatically fails over to OpenRouter on rate-limit or error.",
+    desc: "Usa Google Gemini primero; conmuta automáticamente a OpenRouter en caso de error o límite de cuota.",
   },
   "openrouter-with-fallback": {
     label: "OpenRouter → Gemini Fallback",
-    badge: "OpenRouter Primary ⇄ Gemini",
+    badge: "OpenRouter Primario ⇄ Gemini",
     shortBadge: "OR ⇄ Gemini",
-    desc: "Uses OpenRouter first; automatically fails over to Google Gemini on error.",
+    desc: "Usa OpenRouter primero; conmuta automáticamente a Google Gemini en caso de error.",
   },
   "gemini-only": {
-    label: "Google Gemini Only",
-    badge: "Gemini Strict",
+    label: "Google Gemini Estricto",
+    badge: "Gemini Estricto",
     shortBadge: "Gemini",
-    desc: "Routes strictly through Google Gemini (@google/genai).",
+    desc: "Enruta estrictamente a través del SDK oficial de Google Gemini (@google/genai).",
   },
   "openrouter-only": {
-    label: "OpenRouter Only",
-    badge: "OpenRouter Strict",
+    label: "OpenRouter Estricto",
+    badge: "OpenRouter Estricto",
     shortBadge: "OpenRouter",
-    desc: "Routes strictly through OpenRouter API.",
+    desc: "Enruta estrictamente a través de OpenRouter API.",
   },
 };
 
-type MobileTab = "chat" | "calendar" | "bookings";
-type StudioPanelTab = "all" | "calendar" | "bookings" | "team";
+type MobileTab = "chat" | "calendar" | "bookings" | "studio";
 
 export function ScheduleAgentWorkspace() {
   const [services, setServices] = useState<StudioService[]>([]);
   const [addOns, setAddOns] = useState<StudioAddOn[]>([]);
   const [photographers, setPhotographers] = useState<StudioPhotographer[]>([]);
+  const [backdrops, setBackdrops] = useState<string[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [selectedServiceId, setSelectedServiceId] = useState<string>("headshot-express");
+  const [selectedServiceId, setSelectedServiceId] = useState<string>("pareja-juntos");
   const [dayAvailability, setDayAvailability] = useState<DayAvailability | null>(null);
-  const [weekAvailability, setWeekAvailability] = useState<DayAvailability[]>([]);
   const [nextOpenDates, setNextOpenDates] = useState<string[]>([]);
 
-  // Responsive navigation states
+  // Mobile navigation state (100% mobile priority)
   const [mobileTab, setMobileTab] = useState<MobileTab>("chat");
-  const [studioPanelTab, setStudioPanelTab] = useState<StudioPanelTab>("all");
 
-  // Provider configuration state (seamless switch)
+  // Provider configuration state
   const [providerMode, setProviderMode] = useState<ProviderMode>("gemini-with-fallback");
   const [geminiKey, setGeminiKey] = useState<string>("");
   const [openrouterKey, setOpenrouterKey] = useState<string>("");
@@ -103,7 +96,7 @@ export function ScheduleAgentWorkspace() {
   const [lastTelemetry, setLastTelemetry] = useState<ProviderTelemetry | null>(null);
 
   // Chat / SMS Simulator state
-  const [clientPhone, setClientPhone] = useState<string>("(555) 019-2834");
+  const [clientPhone, setClientPhone] = useState<string>("+52 55 4910 2831");
   const [inputMessage, setInputMessage] = useState<string>("");
   const [isSending, setIsSending] = useState<boolean>(false);
   const [llmHistory, setLlmHistory] = useState<ConversationSession["history"]>([]);
@@ -111,7 +104,7 @@ export function ScheduleAgentWorkspace() {
     {
       id: "welcome-msg",
       role: "assistant",
-      text: "Hi! 👋 I'm Maya, the AI Booking Coordinator at Lumina Portrait & Creative Studio.\n\nText me anytime to check available photo shoot bookings, calculate custom quotes with add-ons, or book/reschedule a session. How can I help you today?",
+      text: "¡Hola! 🌸 Soy Camila, Coordinadora de Citas de **juntosxsiempre**, estudio fotográfico en Roma Norte, CDMX.\n\nEscríbeme por aquí para consultar fechas y horarios disponibles, cotizar paquetes con maquillaje o reels de video, y reservar tu sesión. ¿En qué podemos inspirarte hoy?",
       timestamp: "initial",
     },
   ]);
@@ -121,7 +114,6 @@ export function ScheduleAgentWorkspace() {
   const [isWebhookDialogOpen, setIsWebhookDialogOpen] = useState(false);
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
-  const [resetClearApiKeys, setResetClearApiKeys] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [resetToastMessage, setResetToastMessage] = useState("");
   const [webhookTestOutput, setWebhookTestOutput] = useState<string>("");
@@ -129,18 +121,96 @@ export function ScheduleAgentWorkspace() {
 
   // Manual booking form states
   const [formName, setFormName] = useState("");
-  const [formPhone, setFormPhone] = useState("(555) 482-9104");
+  const [formPhone, setFormPhone] = useState("+52 55 4910 2831");
   const [formEmail, setFormEmail] = useState("");
   const [formDate, setFormDate] = useState("");
   const [formTime, setFormTime] = useState("11:00");
-  const [formService, setFormService] = useState("headshot-express");
+  const [formService, setFormService] = useState("pareja-juntos");
   const [formNotes, setFormNotes] = useState("");
   const [formError, setFormError] = useState("");
+
+  // Parallax elements ref for JS scroll fallback
+  const heroWrapperRef = useRef<HTMLDivElement>(null);
+  const parallaxBackRef = useRef<HTMLDivElement>(null);
+  const parallaxMidRef = useRef<HTMLDivElement>(null);
+  const parallaxFrontRef = useRef<HTMLDivElement>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const bookingFormRef = useRef<HTMLFormElement>(null);
   const msgSeqRef = useRef<number>(1);
-  const formIdPrefix = useId();
+
+  // JavaScript Parallax Scroll Fallback for browsers without native scroll-driven animations
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // Check if browser already supports native CSS view-timeline
+    const supportsNativeParallax =
+      typeof CSS !== "undefined" &&
+      CSS.supports &&
+      CSS.supports("(animation-timeline: view()) and (animation-range: entry)");
+
+    if (supportsNativeParallax) return;
+
+    const wrapper = heroWrapperRef.current;
+    if (!wrapper) return;
+
+    let rafId: number | null = null;
+
+    const handleScroll = () => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        if (!wrapper) return;
+        const scrollY = window.scrollY;
+        const rect = wrapper.getBoundingClientRect();
+        const top = rect.top + scrollY;
+        const height = rect.height;
+        const winHeight = window.innerHeight;
+
+        if (scrollY >= top - winHeight && scrollY <= top + height) {
+          const progress = (scrollY - (top - winHeight)) / (height + winHeight);
+          if (parallaxBackRef.current) {
+            const yBack = -25 + progress * 60;
+            parallaxBackRef.current.style.transform = `translate3d(0, ${yBack}px, 0)`;
+          }
+          if (parallaxMidRef.current) {
+            const yMid = 25 - progress * 50;
+            parallaxMidRef.current.style.transform = `translate3d(0, ${yMid}px, 0)`;
+          }
+          if (parallaxFrontRef.current) {
+            const yFront = 40 - progress * 55;
+            parallaxFrontRef.current.style.transform = `translate3d(0, ${yFront}px, 0)`;
+          }
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            window.addEventListener("scroll", handleScroll, { passive: true });
+            handleScroll();
+          } else {
+            window.removeEventListener("scroll", handleScroll);
+            if (rafId !== null) {
+              cancelAnimationFrame(rafId);
+              rafId = null;
+            }
+          }
+        });
+      },
+      { threshold: 0 },
+    );
+
+    observer.observe(wrapper);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", handleScroll);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, []);
 
   // Fetch studio schedule & availability on demand
   const fetchScheduleData = useCallback(
@@ -158,10 +228,10 @@ export function ScheduleAgentWorkspace() {
       setServices(data.services || []);
       setAddOns(data.addOns || []);
       setPhotographers(data.photographers || []);
+      setBackdrops(data.backdrops || []);
       setAppointments(data.appointments || []);
       setWaitlist(data.waitlist || []);
       setDayAvailability(data.selectedDateAvailability || null);
-      setWeekAvailability(data.weekAvailability || []);
       setNextOpenDates(data.nextOpenDates || []);
 
       if (!selectedDate && data.selectedDateAvailability?.date) {
@@ -174,17 +244,17 @@ export function ScheduleAgentWorkspace() {
 
   useEffect(() => {
     let active = true;
-    fetch("/api/appointments?serviceId=headshot-express")
+    fetch("/api/appointments?serviceId=pareja-juntos")
       .then((r) => r.json())
       .then((data) => {
         if (!active || !data) return;
         setServices(data.services || []);
         setAddOns(data.addOns || []);
         setPhotographers(data.photographers || []);
+        setBackdrops(data.backdrops || []);
         setAppointments(data.appointments || []);
         setWaitlist(data.waitlist || []);
         setDayAvailability(data.selectedDateAvailability || null);
-        setWeekAvailability(data.weekAvailability || []);
         setNextOpenDates(data.nextOpenDates || []);
         if (data.selectedDateAvailability?.date) {
           setSelectedDate(data.selectedDateAvailability.date);
@@ -218,7 +288,7 @@ export function ScheduleAgentWorkspace() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isSending]);
 
-  // Initialize validate-input-after-interaction ARIA sync & WeakMap fallback on the booking form
+  // Form field validation sync
   useEffect(() => {
     const form = bookingFormRef.current;
     if (!form) return;
@@ -278,7 +348,6 @@ export function ScheduleAgentWorkspace() {
     const text = (textOverride ?? inputMessage).trim();
     if (!text || isSending) return;
 
-    // On mobile, switch to the SMS chat view so the user sees the live response immediately
     setMobileTab("chat");
 
     msgSeqRef.current += 1;
@@ -300,7 +369,7 @@ export function ScheduleAgentWorkspace() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionId: "web-pilot-session",
+          sessionId: "juntosxsiempre-mobile-session",
           clientPhone,
           message: text,
           clientAppointments: appointments.length > 0 ? appointments : undefined,
@@ -341,7 +410,7 @@ export function ScheduleAgentWorkspace() {
         {
           id: `err-${msgSeqRef.current}`,
           role: "assistant",
-          text: `Connection error: ${errMsg}`,
+          text: `Error de conexión: ${errMsg}`,
           timestamp: `err-${msgSeqRef.current}`,
         },
       ]);
@@ -350,13 +419,13 @@ export function ScheduleAgentWorkspace() {
     }
   };
 
-  const handleFullReset = async (options?: { clearApiKeys?: boolean }) => {
+  const handleFullReset = async () => {
     setIsResetting(true);
     try {
       const res = await fetch("/api/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serviceId: "headshot-express" }),
+        body: JSON.stringify({ serviceId: "pareja-juntos" }),
       });
       const data = await res.json();
 
@@ -367,7 +436,6 @@ export function ScheduleAgentWorkspace() {
         setSelectedDate(data.selectedDateAvailability.date);
         setFormDate(data.selectedDateAvailability.date);
       }
-      if (data.weekAvailability) setWeekAvailability(data.weekAvailability);
       if (data.nextOpenDates) setNextOpenDates(data.nextOpenDates);
 
       msgSeqRef.current += 1;
@@ -376,46 +444,24 @@ export function ScheduleAgentWorkspace() {
         {
           id: `welcome-${msgSeqRef.current}`,
           role: "assistant",
-          text: "Hi! 👋 I'm Maya, the AI Booking Coordinator at Lumina Portrait & Creative Studio.\n\nText me anytime to check available photo shoot bookings, calculate custom quotes with add-ons, or book/reschedule a session. How can I help you today?",
+          text: "¡Hola! 🌸 Soy Camila, Coordinadora de Citas de **juntosxsiempre**, estudio fotográfico en Roma Norte, CDMX.\n\nEscríbeme por aquí para consultar fechas y horarios disponibles, cotizar paquetes con maquillaje o reels de video, y reservar tu sesión. ¿En qué podemos inspirarte hoy?",
           timestamp: `reset-${msgSeqRef.current}`,
         },
       ]);
-      setClientPhone("(555) 019-2834");
+      setClientPhone("+52 55 4910 2831");
       setInputMessage("");
-      setSelectedServiceId("headshot-express");
+      setSelectedServiceId("pareja-juntos");
       setLastTelemetry(null);
       setMobileTab("chat");
-      setStudioPanelTab("all");
-
-      if (options?.clearApiKeys) {
-        setGeminiKey("");
-        setOpenrouterKey("");
-        setGeminiModel("");
-        setOpenrouterModel("");
-      }
 
       setIsResetDialogOpen(false);
-      setResetToastMessage("✨ Studio appointments, priority waitlist, and SMS chat restored to initial state!");
+      setResetToastMessage("✨ ¡Citas, lista de espera y chat restaurados al estado inicial de juntosxsiempre!");
       setTimeout(() => setResetToastMessage(""), 4500);
     } catch (err: unknown) {
-      console.error("Failed to reset studio:", err);
-      // Fallback to local reset
-      msgSeqRef.current += 1;
-      setMessages([
-        {
-          id: `err-reset-${msgSeqRef.current}`,
-          role: "assistant",
-          text: "Session reset to fresh demo state! How can I help you today?",
-          timestamp: `reset-${msgSeqRef.current}`,
-        },
-      ]);
+      console.error("Fallo al reiniciar el estudio:", err);
     } finally {
       setIsResetting(false);
     }
-  };
-
-  const handleResetDemo = () => {
-    setIsResetDialogOpen(true);
   };
 
   const handleCancelBooking = async (bookingRef: string) => {
@@ -449,7 +495,7 @@ export function ScheduleAgentWorkspace() {
     });
     const data = await res.json();
     if (!res.ok) {
-      setFormError(data.error || "Could not create appointment.");
+      setFormError(data.error || "No se pudo registrar la cita.");
       return;
     }
     setIsBookingDialogOpen(false);
@@ -467,8 +513,8 @@ export function ScheduleAgentWorkspace() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          From: "+15550199988",
-          Body: `Hi! What headshot slots do you have open on ${nextOpenDates[0] || selectedDate}?`,
+          From: "+525549102831",
+          Body: `¡Hola! ¿Qué horarios tienen disponibles para una sesión en pareja este fin de semana?`,
           providerMode,
           format: "twiml",
         }),
@@ -484,56 +530,49 @@ export function ScheduleAgentWorkspace() {
 
   const confirmedAppointments = appointments.filter((a) => a.status !== "cancelled");
   const totalScheduledRevenue = confirmedAppointments.reduce((sum, a) => sum + a.price, 0);
-  const openedWaitlistCount = waitlist.filter((w) => w.status === "slot_opened").length;
-  const hasAnyLiveKey =
-    Boolean(geminiKey.trim()) ||
-    Boolean(openrouterKey.trim()) ||
-    serverKeyStatus.geminiConfigured ||
-    serverKeyStatus.openrouterConfigured;
-
-  const firstOpenDate = nextOpenDates[0] || selectedDate || "2026-10-29";
+  const firstOpenDate = nextOpenDates[0] || selectedDate || "2026-11-10";
   const secondOpenDate = nextOpenDates[1] || firstOpenDate;
 
   const quickPrompts = [
     {
-      icon: "✨",
-      label: "Available Bookings",
-      text: `Can you check what bookings are available for portraits this week?`,
+      icon: "🌸",
+      label: "Disponibilidad",
+      text: "¿Qué fechas y horarios tienen disponibles para sesión de pareja en juntosxsiempre?",
     },
     {
-      icon: "💰",
-      label: "Quote + Add-Ons",
-      text: "Can you calculate a quote for a Signature Portrait with Hair & Makeup and 24-Hour Rush Delivery?",
+      icon: "✨",
+      label: "Cotizar con Maquillaje",
+      text: "Quiero cotizar la Sesión Juntos x Siempre agregando Maquillaje y Peinado Profesional y Entrega Express 24h.",
     },
     {
       icon: "📸",
-      label: "Photographers & Spaces",
-      text: "Who are your studio photographers and what backdrops do you have available?",
+      label: "Fotógrafos & Sets",
+      text: "¿Quiénes son los fotógrafos del estudio y qué fondos tienen disponibles en Roma Norte?",
     },
     {
       icon: "⚡",
-      label: "Instant Book",
-      text: `Please book an Express Headshot on ${firstOpenDate} at 11:30 AM for Jordan Taylor, email jordan.taylor@studio.co`,
+      label: "Agendar Cita",
+      text: `Deseo agendar la Sesión Juntos x Siempre para el ${firstOpenDate} a las 11:30 AM a nombre de Mariana Rivera, correo mariana.rivera@gmail.com`,
     },
     {
       icon: "💎",
-      label: "Upgrade LUM-2041",
-      text: "For my booking LUM-2041, can we add 5 Extra Retouched Digitals and request Elena Vance?",
+      label: "Mejorar Cita JXS-2041",
+      text: "Para mi reservación JXS-2041, ¿podemos agregar 5 Fotos Extra con Retoque Fino y solicitar a Sofía Morales?",
     },
     {
       icon: "📋",
-      label: "Prep & Deposit Link",
-      text: "Can you send me the prep checklist and deposit link for booking LUM-2055?",
+      label: "Guía de Vestuario",
+      text: "¿Me puedes enviar la guía de preparación de vestuario y el enlace de anticipo para la cita JXS-2055?",
     },
     {
       icon: "🔔",
-      label: "Join Waitlist",
-      text: `Can you put me on the waitlist for an Express Headshot on ${firstOpenDate} morning? I'm Alex Kim, email alex@kim.co`,
+      label: "Lista de Espera",
+      text: `Por favor anótame en lista de espera para el ${firstOpenDate} por la mañana para sesión de pareja. Soy Lucía Benítez, correo lucia.benitez@outlook.com`,
     },
     {
       icon: "🗓️",
-      label: "Reschedule LUM-2041",
-      text: `Can I reschedule booking LUM-2041 to ${secondOpenDate} at 3:00 PM?`,
+      label: "Reprogramar JXS-2041",
+      text: `¿Puedo reprogramar mi cita JXS-2041 para el ${secondOpenDate} a las 3:00 PM?`,
     },
   ];
 
@@ -541,1435 +580,1065 @@ export function ScheduleAgentWorkspace() {
     services.find((s) => s.id === selectedServiceId) || services[0];
 
   return (
-    <div className="min-h-dvh bg-[#08090d] bg-[radial-gradient(ellipse_80%_50%_at_50%_-15%,rgba(245,158,11,0.10),transparent_70%)] pb-20 text-slate-100 lg:pb-8">
-      {/* Sleek Mobile-First Top App Bar */}
-      <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-[#0b0d14]/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3.5 py-2.5 sm:px-6 sm:py-3">
-          {/* Brand Identity */}
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 text-slate-950 shadow-lg shadow-amber-500/20 sm:h-10 sm:w-10">
-              <Camera className="h-4 w-4 stroke-[2.25] sm:h-5 sm:w-5" />
+    <div className="min-h-dvh bg-[#fbf7f4] text-[#2d1822] pb-28 sm:pb-32 font-sans select-text">
+      {/* Toast Notification */}
+      {resetToastMessage && (
+        <div className="fixed top-4 inset-x-4 z-50 mx-auto max-w-md animate-bounce rounded-2xl border border-pink-300 bg-[#fffdfb] p-4 text-center text-xs font-semibold text-[#9e193e] shadow-[0_12px_30px_rgba(224,68,110,0.2)]">
+          {resetToastMessage}
+        </div>
+      )}
+
+      {/* --- Sticky Top Mobile Bar (100% Mobile Focused) --- */}
+      <header className="sticky top-0 z-30 border-b border-pink-200/70 bg-[#fffdfb]/92 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-md items-center justify-between px-3.5 py-2.5">
+          {/* Logo & Brand Identity */}
+          <div className="flex items-center gap-2.5">
+            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#e0446e] via-[#f06a8f] to-[#f8cfda] text-white shadow-md shadow-pink-500/25">
+              <Camera className="h-5 w-5 stroke-[2.2]" />
+              <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] text-white ring-2 ring-white">
+                ✓
+              </span>
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="studio-hero-title whitespace-nowrap font-bold tracking-tight text-white">
-                  Lumina Studio
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-base font-extrabold tracking-tight text-[#2d1822]">
+                  juntosxsiempre
                 </h1>
-                <span className="hidden rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-amber-300 sm:inline-block">
-                  AI SMS Coordinator
+                <span className="rounded-full bg-pink-100 px-2 py-0.5 text-[10px] font-bold text-[#c52752]">
+                  CDMX
                 </span>
               </div>
-              <p className="hidden truncate text-[11px] text-slate-400 sm:block">
-                Portrait &amp; Editorial Booking Agent • 11 Live Tools
+              <p className="text-[11px] font-medium text-[#7b5965] flex items-center gap-1">
+                <MapPin className="h-3 w-3 text-[#e0446e]" /> Roma Norte • Estudio Fotográfico
               </p>
             </div>
           </div>
 
-          {/* Right Action Controls — Compact on Mobile, Full on Desktop */}
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            {/* Desktop Inline Provider Selector */}
-            <div className="hidden items-center gap-1.5 rounded-xl border border-white/10 bg-[#131724] px-2.5 py-1.5 md:flex">
-              <Cpu className="h-3.5 w-3.5 text-amber-400" />
-              <label htmlFor="provider-mode-select" className="sr-only">
-                Select LLM Provider Mode
-              </label>
-              <select
-                id="provider-mode-select"
-                value={providerMode}
-                onChange={(e) => setProviderMode(e.target.value as ProviderMode)}
-                className="bg-transparent text-xs font-medium text-slate-100 focus:outline-none"
-              >
-                <option value="gemini-with-fallback" className="bg-[#131724]">
-                  Gemini Primary ⇄ OpenRouter
-                </option>
-                <option value="openrouter-with-fallback" className="bg-[#131724]">
-                  OpenRouter Primary ⇄ Gemini
-                </option>
-                <option value="gemini-only" className="bg-[#131724]">
-                  Google Gemini Only
-                </option>
-                <option value="openrouter-only" className="bg-[#131724]">
-                  OpenRouter Only
-                </option>
-              </select>
-            </div>
-
-            {/* LLM Routing / API Keys Pill Button */}
+          {/* Action Pills */}
+          <div className="flex items-center gap-1.5">
+            {/* Quick Provider Pill */}
             <button
               type="button"
               onClick={() => setIsProviderDialogOpen(true)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-slate-200 transition hover:bg-white/10 active:scale-[0.98]"
-              title="Configure LLM Provider & API Keys"
+              className="inline-flex items-center gap-1 rounded-xl border border-pink-200 bg-pink-50/70 px-2.5 py-1.5 text-xs font-semibold text-[#9e193e] active:scale-95 transition"
+              title="Configuración de IA & API Keys"
             >
-              <KeyRound className="h-3.5 w-3.5 text-amber-400" />
-              <span className="text-[11px] font-semibold md:hidden">Models</span>
-              <span className="hidden md:inline">Models &amp; Keys</span>
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  hasAnyLiveKey
-                    ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
-                    : "bg-amber-400"
-                }`}
-              />
+              <Cpu className="h-3.5 w-3.5 text-[#e0446e]" />
+              <span>{PROVIDER_MODE_LABELS[providerMode]?.shortBadge}</span>
             </button>
 
-            {/* Webhook Inspector Button */}
-            <button
-              type="button"
-              onClick={() => setIsWebhookDialogOpen(true)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-slate-200 transition hover:bg-white/10 active:scale-[0.98]"
-              title="Twilio SMS Webhook Inspector"
-            >
-              <Code2 className="h-3.5 w-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">Webhook</span>
-            </button>
-
-            {/* Reset Everything Button */}
+            {/* Reset Menu Pill */}
             <button
               type="button"
               onClick={() => setIsResetDialogOpen(true)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-slate-200 transition hover:border-amber-400/40 hover:bg-white/10 active:scale-[0.98]"
-              title="Reset everything back to initial state"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-pink-200 bg-white text-[#7b5965] hover:text-[#e0446e] active:scale-95 transition"
+              title="Reiniciar Demo"
+              aria-label="Reiniciar Demo"
             >
-              <RefreshCw className="h-3.5 w-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Reset</span>
-            </button>
-
-            {/* New Booking CTA */}
-            <button
-              type="button"
-              onClick={() => {
-                setFormDate(selectedDate || firstOpenDate);
-                setIsBookingDialogOpen(true);
-              }}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-3 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/15 transition hover:from-amber-400 hover:to-orange-400 active:scale-[0.98]"
-            >
-              <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
-              <span>Book</span>
+              <RefreshCw className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Floating Reset Toast Notification */}
-      {resetToastMessage && (
+      {/* --- Parallax Hero Studio Stage (parallax-scroll-effects) --- */}
+      <section
+        ref={heroWrapperRef}
+        className="parallax-stage relative mx-auto max-w-md overflow-clip px-4 pt-4 pb-2"
+      >
+        {/* Parallax Background Layer: Soft Pink & Cream Bokeh Circles */}
         <div
-          role="status"
-          aria-live="polite"
-          className="fixed top-16 right-4 z-50 flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-[#0e1713]/95 px-4 py-2.5 text-xs font-semibold text-emerald-200 shadow-xl backdrop-blur-md animate-in fade-in"
+          ref={parallaxBackRef}
+          className="parallax-layer-back pointer-events-none absolute inset-0 z-0 flex items-center justify-center"
+          aria-hidden="true"
         >
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-          <span>{resetToastMessage}</span>
+          <div className="h-64 w-64 rounded-full bg-gradient-to-tr from-[#fce7ec] to-[#f8cfda]/50 blur-3xl opacity-80" />
+          <div className="absolute top-2 right-4 h-32 w-32 rounded-full bg-[#f4e8dc]/60 blur-2xl" />
+          <div className="absolute -bottom-4 left-6 h-28 w-28 rounded-full bg-[#fdf2f4] blur-xl" />
         </div>
-      )}
 
-      {/* Main Responsive Workspace Grid */}
-      <main className="mx-auto max-w-7xl px-3 pt-3 sm:px-6 sm:pt-5">
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:items-start">
-          {/* =====================================================================
-              LEFT COLUMN (5 cols on lg): iPhone-Style AI SMS Coordinator
-              Visible on mobile when mobileTab === "chat", always visible on lg+
-             ===================================================================== */}
-          <section
-            aria-label="Client SMS Text Simulator"
-            className={`${
-              mobileTab === "chat" ? "flex" : "hidden lg:flex"
-            } flex-col lg:sticky lg:top-20 lg:col-span-5`}
-          >
-            <div className="flex h-[calc(100dvh-8.4rem)] min-h-[480px] flex-col overflow-hidden rounded-3xl border border-white/[0.1] bg-[#0e111b] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] lg:h-[calc(100dvh-6.5rem)] lg:max-h-[820px]">
-              {/* Phone Top Bezel & Coordinator Persona Header */}
-              <div className="border-b border-white/[0.08] bg-gradient-to-b from-[#161b2c] to-[#121624] px-4 py-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400/20 to-indigo-500/20 ring-1 ring-amber-400/30">
-                      <Sparkles className="h-4 w-4 text-amber-300" />
-                      <span className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#121624] bg-emerald-400" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <h2 className="text-xs font-bold text-white sm:text-sm">
-                          Maya • Studio AI
-                        </h2>
-                        <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-emerald-300">
-                          SMS Live
-                        </span>
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-400">
-                        <Phone className="h-2.5 w-2.5 text-amber-400/80" />
-                        <span>Client:</span>
-                        <input
-                          type="tel"
-                          value={clientPhone}
-                          onChange={(e) => setClientPhone(e.target.value)}
-                          aria-label="Simulated Client Phone Number"
-                          className="w-26 rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-slate-200 focus:ring-1 focus:ring-amber-400 focus:outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
+        {/* Parallax Midground Layer: Decorative Photographic Optics & Elements */}
+        <div
+          ref={parallaxMidRef}
+          className="parallax-layer-mid pointer-events-none absolute inset-0 z-10 flex items-center justify-between px-6"
+          aria-hidden="true"
+        >
+          {/* Subtle aperture & crop brackets */}
+          <div className="h-10 w-10 rounded-full border border-pink-300/40 opacity-70 animate-gentle-sway" />
+          <div className="flex flex-col items-center gap-1 text-[9px] tracking-widest text-[#c98894]/60 font-mono">
+            <span>[ 50mm f/1.4 ]</span>
+            <span>PRO-FOTO 1/250</span>
+          </div>
+          <div className="h-8 w-8 rounded-full border border-amber-300/40 opacity-60 animate-pulse-subtle" />
+        </div>
 
-                  <button
-                    type="button"
-                    onClick={handleResetDemo}
-                    className="inline-flex h-8 items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 text-[11px] font-medium text-slate-300 transition hover:bg-white/10 active:scale-95"
-                    title="Reset conversation and demo bookings"
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                    <span>Reset</span>
-                  </button>
-                </div>
-
-                {/* Single-Row Horizontal Swipeable 1-Click Prompts Rail */}
-                <div className="mt-2.5 border-t border-white/[0.06] pt-2">
-                  <div className="flex items-center justify-between text-[10px] text-slate-400">
-                    <span className="font-semibold uppercase tracking-wider text-slate-400">
-                      Try 1-Tap Client Texts
-                    </span>
-                    <span className="text-[10px] text-slate-500">Swipe →</span>
-                  </div>
-                  <div className="no-scrollbar mt-1.5 flex snap-x snap-mandatory items-center gap-1.5 overflow-x-auto pb-0.5">
-                    {quickPrompts.map((qp) => (
-                      <button
-                        key={qp.label}
-                        type="button"
-                        disabled={isSending}
-                        onClick={() => sendTextMessage(qp.text)}
-                        className="inline-flex shrink-0 snap-start items-center gap-1.5 rounded-full border border-amber-500/25 bg-amber-500/[0.09] px-3 py-1.5 text-[11px] font-medium text-amber-100 transition hover:border-amber-400/50 hover:bg-amber-500/20 active:scale-95 disabled:opacity-40"
-                      >
-                        <span aria-hidden="true">{qp.icon}</span>
-                        <span>{qp.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* SMS Messages Scroll Area */}
-              <div className="flex-1 space-y-3.5 overflow-y-auto px-3.5 py-4 sm:px-4">
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex flex-col ${
-                      msg.role === "user" ? "items-end" : "items-start"
-                    }`}
-                  >
-                    {/* Sender Micro-Label */}
-                    <span className="mb-1 px-1 text-[10px] font-medium text-slate-500">
-                      {msg.role === "user" ? `Client (${clientPhone})` : "Maya • Lumina Studio"}
-                    </span>
-
-                    <div
-                      className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed shadow-sm ${
-                        msg.role === "user"
-                          ? "rounded-br-xs bg-gradient-to-br from-amber-500 to-orange-600 font-medium text-slate-950"
-                          : "rounded-bl-xs border border-white/[0.09] bg-[#161b2b] text-slate-100"
-                      }`}
-                    >
-                      <div className="whitespace-pre-wrap">{msg.text}</div>
-                    </div>
-
-                    {/* Compact Collapsible Tool & Provider Telemetry Drawer */}
-                    {msg.role === "assistant" &&
-                      (msg.telemetry ||
-                        (msg.toolExecutions && msg.toolExecutions.length > 0)) && (
-                        <details className="group mt-1.5 w-full max-w-[90%] rounded-xl border border-white/[0.07] bg-[#0a0c14]/90 px-3 py-1.5 text-[11px] text-slate-400">
-                          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 select-none">
-                            <div className="flex flex-wrap items-center gap-2">
-                              {msg.toolExecutions && msg.toolExecutions.length > 0 && (
-                                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
-                                  <Wrench className="h-2.5 w-2.5" />
-                                  {msg.toolExecutions.length} tool
-                                  {msg.toolExecutions.length > 1 ? "s" : ""} run
-                                </span>
-                              )}
-                              {msg.telemetry && (
-                                <span className="inline-flex items-center gap-1 truncate text-[10px] font-medium text-indigo-300">
-                                  <Bot className="h-3 w-3 shrink-0" />
-                                  <span className="truncate">{msg.telemetry.activeProvider}</span>
-                                </span>
-                              )}
-                            </div>
-                            <span className="inline-flex shrink-0 items-center gap-1 text-[10px] text-slate-500">
-                              {msg.telemetry ? `${msg.telemetry.latencyMs}ms` : "Inspect"}
-                              <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />
-                            </span>
-                          </summary>
-
-                          <div className="mt-2 space-y-1.5 border-t border-white/[0.06] pt-2">
-                            {msg.telemetry?.fallbackTriggered && (
-                              <div className="rounded-lg bg-amber-500/10 px-2 py-1 text-[10px] text-amber-300">
-                                ⚡ Failover active: {msg.telemetry.fallbackReason}
-                              </div>
-                            )}
-
-                            {msg.toolExecutions?.map((t) => (
-                              <div
-                                key={t.id}
-                                className="rounded-lg border border-white/5 bg-white/[0.02] p-2"
-                              >
-                                <div className="font-mono text-[10px] font-semibold text-emerald-300">
-                                  {t.toolName}({Object.keys(t.args || {}).join(", ")})
-                                </div>
-                                <pre className="mt-1 max-h-32 overflow-auto rounded bg-black/50 p-1.5 font-mono text-[9px] text-slate-300">
-                                  {JSON.stringify(
-                                    { args: t.args, result: t.result },
-                                    null,
-                                    2,
-                                  )}
-                                </pre>
-                              </div>
-                            ))}
-                          </div>
-                        </details>
-                      )}
-                  </div>
-                ))}
-
-                {isSending && (
-                  <div className="flex items-center gap-2.5 rounded-2xl border border-white/5 bg-[#151928] px-3.5 py-2.5 text-xs text-slate-300">
-                    <div className="h-2 w-2 animate-ping rounded-full bg-amber-400" />
-                    <span>
-                      Maya is checking studio availability (
-                      {PROVIDER_MODE_LABELS[providerMode].shortBadge})...
-                    </span>
-                  </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* SMS Input Composer */}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  sendTextMessage();
-                }}
-                className="border-t border-white/[0.08] bg-[#121624] p-2.5 sm:p-3"
-              >
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    placeholder="Text Maya (e.g. 'What portrait slots are open?')"
-                    disabled={isSending}
-                    className="h-10 flex-1 rounded-2xl border border-white/10 bg-[#090b12] px-3.5 text-xs text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none sm:text-[13px]"
-                  />
-                  <button
-                    type="submit"
-                    disabled={isSending || !inputMessage.trim()}
-                    aria-label="Send SMS message"
-                    className="inline-flex h-10 items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/15 transition hover:from-amber-400 hover:to-orange-400 active:scale-95 disabled:opacity-40"
-                  >
-                    <Send className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Send</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          </section>
-
-          {/* =====================================================================
-              RIGHT COLUMN (7 cols on lg): Studio Command Center
-              On mobile, switches cleanly between "calendar" and "bookings" tabs
-             ===================================================================== */}
-          <section
-            aria-label="Studio Operations & Live Schedule"
-            className={`${
-              mobileTab === "chat" ? "hidden lg:flex" : "flex"
-            } flex-col gap-4 lg:col-span-7`}
-          >
-            {/* Compact 4-Card KPI Strip (Semantic <article> cards per `card` guide) */}
-            <div className="kpi-card-container grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
-              <article className="rounded-2xl border border-white/[0.08] bg-[#10131f] p-3.5 shadow-sm">
-                <header className="flex items-center justify-between text-[11px] font-medium text-slate-400">
-                  <span>Confirmed Shoots</span>
-                  <Calendar className="h-3.5 w-3.5 text-amber-400" />
-                </header>
-                <p className="studio-kpi-value mt-1.5 font-bold text-white">
-                  {confirmedAppointments.length}
-                </p>
-                <p className="mt-0.5 text-[10px] text-emerald-400">
-                  Live SMS sync active
-                </p>
-              </article>
-
-              <article className="rounded-2xl border border-white/[0.08] bg-[#10131f] p-3.5 shadow-sm">
-                <header className="flex items-center justify-between text-[11px] font-medium text-slate-400">
-                  <span>Booked Revenue</span>
-                  <DollarSign className="h-3.5 w-3.5 text-emerald-400" />
-                </header>
-                <p className="studio-kpi-value mt-1.5 font-bold text-white">
-                  ${totalScheduledRevenue.toLocaleString()}
-                </p>
-                <p className="mt-0.5 text-[10px] text-slate-400">
-                  {services.length} packages + 5 add-ons
-                </p>
-              </article>
-
-              <article className="rounded-2xl border border-white/[0.08] bg-[#10131f] p-3.5 shadow-sm">
-                <header className="flex items-center justify-between text-[11px] font-medium text-slate-400">
-                  <span>Open Slots ({selectedDate.slice(5) || "Today"})</span>
-                  <Clock className="h-3.5 w-3.5 text-cyan-400" />
-                </header>
-                <p className="studio-kpi-value mt-1.5 font-bold text-white">
-                  {dayAvailability?.availableSlots.length ?? 0}
-                </p>
-                <p className="mt-0.5 truncate text-[10px] text-slate-400">
-                  {dayAvailability?.isOpen
-                    ? dayAvailability.operatingHours
-                    : "Studio Closed"}
-                </p>
-              </article>
-
-              <article className="rounded-2xl border border-white/[0.08] bg-[#10131f] p-3.5 shadow-sm">
-                <header className="flex items-center justify-between text-[11px] font-medium text-slate-400">
-                  <span>Waitlist Queue</span>
-                  <BellRing className="h-3.5 w-3.5 text-amber-400" />
-                </header>
-                <p className="studio-kpi-value mt-1.5 font-bold text-white">
-                  {waitlist.length}
-                </p>
-                <p className="mt-0.5 truncate text-[10px] text-amber-300">
-                  {openedWaitlistCount > 0
-                    ? `${openedWaitlistCount} slot alert triggered!`
-                    : "Auto-notifies on cancel"}
-                </p>
-              </article>
-            </div>
-
-            {/* Desktop Sub-Navigation Filter Pill Bar (keeps desktop uncluttered too) */}
-            <div className="hidden items-center justify-between gap-2 rounded-2xl border border-white/[0.08] bg-[#10131f] p-1.5 lg:flex">
-              <div className="flex items-center gap-1">
-                {(
-                  [
-                    { id: "all", label: "All Views", icon: Layers },
-                    {
-                      id: "calendar",
-                      label: `Live Slots (${dayAvailability?.availableSlots.length ?? 0})`,
-                      icon: Calendar,
-                    },
-                    {
-                      id: "bookings",
-                      label: `Bookings (${appointments.length})`,
-                      icon: CheckCircle2,
-                    },
-                    {
-                      id: "team",
-                      label: `Waitlist & Team (${waitlist.length})`,
-                      icon: Users,
-                    },
-                  ] as const
-                ).map((tab) => {
-                  const Icon = tab.icon;
-                  const active = studioPanelTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setStudioPanelTab(tab.id)}
-                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition ${
-                        active
-                          ? "bg-amber-500 text-slate-950 shadow-sm"
-                          : "text-slate-300 hover:bg-white/5 hover:text-white"
-                      }`}
-                    >
-                      <Icon className="h-3.5 w-3.5 shrink-0" />
-                      <span>{tab.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <span className="hidden truncate pr-2 text-[11px] text-slate-400 xl:inline">
-                {lastTelemetry
-                  ? `${lastTelemetry.activeProvider} (${lastTelemetry.latencyMs}ms)`
-                  : PROVIDER_MODE_LABELS[providerMode].badge}
+        {/* Parallax Foreground Layer: Main Mobile Studio Hero Card */}
+        <div
+          ref={parallaxFrontRef}
+          className="parallax-layer-front relative z-20 rounded-3xl border border-pink-200/90 bg-gradient-to-b from-[#fffdfb] to-[#faf3ec]/90 p-4 shadow-[0_12px_35px_-8px_rgba(224,68,110,0.14)]"
+        >
+          <div className="flex items-center justify-between gap-2 border-b border-pink-100 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs font-bold text-[#2d1822]">
+                Estudio Abierto • Citas en Vivo
               </span>
             </div>
+            <div className="flex items-center gap-1 rounded-full bg-pink-100/80 px-2.5 py-0.5 text-[11px] font-semibold text-[#9e193e]">
+              <Sparkles className="h-3 w-3 text-[#e0446e]" />
+              <span>Coordinadora Camila</span>
+            </div>
+          </div>
 
-            {/* =================================================================
-                PANEL A: Interactive Day & Slot Availability Explorer
-                Visible on mobile when mobileTab === "calendar",
-                and on desktop when studioPanelTab is "all" or "calendar"
-               ================================================================= */}
-            <div
-              className={`${
-                mobileTab === "calendar" ? "block" : "hidden"
-              } ${
-                studioPanelTab === "all" || studioPanelTab === "calendar"
-                  ? "lg:block"
-                  : "lg:hidden"
-              } rounded-3xl border border-white/[0.09] bg-[#10131f] p-4 shadow-lg sm:p-5`}
-            >
-              <div className="flex flex-col gap-3 border-b border-white/[0.08] pb-3.5 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-bold text-white sm:text-base">
-                      Live Studio Availability Explorer
-                    </h2>
-                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
-                      Real-Time
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-xs text-slate-400">
-                    Tap any open time slot to send an instant booking request via SMS
-                  </p>
-                </div>
+          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-2xl bg-white/80 p-2.5 border border-pink-100 shadow-sm">
+              <p className="text-[10px] font-medium text-[#7b5965]">Anticipo</p>
+              <p className="text-sm font-bold text-[#c52752]">Desde $500</p>
+              <p className="text-[9px] text-[#8e7079]">100% transferible</p>
+            </div>
+            <div className="rounded-2xl bg-white/80 p-2.5 border border-pink-100 shadow-sm">
+              <p className="text-[10px] font-medium text-[#7b5965]">Galería</p>
+              <p className="text-sm font-bold text-[#2d1822]">48 Horas</p>
+              <p className="text-[9px] text-[#8e7079]">Revisión digital</p>
+            </div>
+            <div className="rounded-2xl bg-white/80 p-2.5 border border-pink-100 shadow-sm">
+              <p className="text-[10px] font-medium text-[#7b5965]">Ubicación</p>
+              <p className="text-sm font-bold text-[#2d1822]">Roma Norte</p>
+              <p className="text-[9px] text-[#8e7079]">Valet parking</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-                <div className="flex items-center gap-2">
-                  <label htmlFor="explorer-service-select" className="sr-only">
-                    Select Photography Package
-                  </label>
-                  <select
-                    id="explorer-service-select"
-                    value={selectedServiceId}
-                    onChange={(e) => {
-                      const nextSvc = e.target.value;
-                      setSelectedServiceId(nextSvc);
-                      fetchScheduleData(selectedDate, nextSvc);
-                    }}
-                    className="h-9 w-full rounded-xl border border-white/10 bg-[#171c2d] px-3 text-xs font-medium text-slate-100 focus:border-amber-400 focus:outline-none sm:w-auto"
+      {/* --- Main Mobile Viewports (Switched via Bottom Nav) --- */}
+      <main className="mx-auto max-w-md px-3 pt-2 pb-12">
+        {/* TAB 1: SMS / CHAT COORDINATOR (CAMILA) */}
+        {mobileTab === "chat" && (
+          <div className="flex flex-col gap-3">
+            {/* Quick Prompts Carousel (Horizontal Flick) */}
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
+              {quickPrompts.map((qp, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => sendTextMessage(qp.text)}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-pink-200/80 bg-[#fffdfb] px-3 py-1.5 text-xs font-medium text-[#5e3347] shadow-sm transition hover:border-pink-300 hover:bg-pink-50 active:scale-95"
+                >
+                  <span>{qp.icon}</span>
+                  <span>{qp.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Chat Messages Frame */}
+            <div className="flex flex-col gap-3 min-h-[360px] max-h-[56vh] overflow-y-auto rounded-3xl border border-pink-200/80 bg-[#fffdfb] p-3.5 shadow-sm">
+              {messages.map((msg) => {
+                const isAssistant = msg.role === "assistant";
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex flex-col ${isAssistant ? "items-start" : "items-end"}`}
                   >
-                    {services.map((s) => (
-                      <option key={s.id} value={s.id} className="bg-[#171c2d]">
-                        {s.shortName} ({s.durationMinutes}m • ${s.price})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Horizontal Touch-Friendly 7-Day Date Strip */}
-              <div className="no-scrollbar mt-3.5 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-7 sm:gap-1.5">
-                {weekAvailability.map((day) => {
-                  const isSelected = day.date === selectedDate;
-                  return (
-                    <button
-                      key={day.date}
-                      type="button"
-                      onClick={() => {
-                        setSelectedDate(day.date);
-                        fetchScheduleData(day.date, selectedServiceId);
-                      }}
-                      className={`flex min-w-[74px] shrink-0 snap-start flex-col items-center justify-center rounded-2xl border px-2.5 py-2.5 text-center transition active:scale-95 sm:min-w-0 ${
-                        isSelected
-                          ? "border-amber-400 bg-gradient-to-b from-amber-500/25 to-amber-500/10 text-white shadow-md shadow-amber-500/10"
-                          : day.isOpen
-                            ? "border-white/[0.08] bg-white/[0.03] text-slate-200 hover:bg-white/[0.07]"
-                            : "border-white/[0.04] bg-white/[0.01] text-slate-500"
+                    {/* Bubble */}
+                    <div
+                      className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed shadow-sm ${
+                        isAssistant
+                          ? "rounded-tl-sm border border-pink-100 bg-[#fbf7f4] text-[#2d1822]"
+                          : "rounded-tr-sm bg-gradient-to-r from-[#e0446e] to-[#c52752] text-white"
                       }`}
                     >
-                      <span className="text-[10px] font-semibold uppercase tracking-wider">
-                        {day.dayName.slice(0, 3)}
+                      {isAssistant && (
+                        <div className="mb-1 flex items-center gap-1 text-[10px] font-bold text-[#e0446e]">
+                          <Bot className="h-3 w-3" />
+                          <span>Camila • juntosxsiempre</span>
+                        </div>
+                      )}
+                      <p className="whitespace-pre-wrap">{msg.text}</p>
+                    </div>
+
+                    {/* Tool Executions & Telemetry Drawer */}
+                    {msg.toolExecutions && msg.toolExecutions.length > 0 && (
+                      <details className="mt-1 max-w-[88%] rounded-xl border border-pink-200/60 bg-pink-50/40 p-2 text-[10px] text-[#7b5965]">
+                        <summary className="cursor-pointer font-semibold text-[#9e193e] flex items-center gap-1">
+                          <Wrench className="h-3 w-3" />
+                          <span>
+                            {msg.toolExecutions.length} herramienta(s) ejecutada(s)
+                          </span>
+                        </summary>
+                        <div className="mt-1.5 flex flex-col gap-1">
+                          {msg.toolExecutions.map((tx) => (
+                            <div key={tx.id} className="rounded bg-white/80 p-1.5 border border-pink-100">
+                              <span className="font-bold text-[#c52752]">{tx.toolName}</span>
+                              <pre className="mt-0.5 overflow-x-auto text-[9px] text-[#2d1822]">
+                                {JSON.stringify(tx.args, null, 2)}
+                              </pre>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                );
+              })}
+
+              {isSending && (
+                <div className="flex items-center gap-2 self-start rounded-2xl rounded-tl-sm border border-pink-100 bg-[#fbf7f4] px-4 py-2.5 text-xs text-[#7b5965]">
+                  <span className="h-2 w-2 rounded-full bg-[#e0446e] animate-ping" />
+                  <span>Camila está revisando la agenda...</span>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Client Phone Bar & Quick Reset */}
+            <div className="flex items-center justify-between gap-2 px-1 text-[11px] text-[#7b5965]">
+              <div className="flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5 text-[#e0446e]" />
+                <span>Simulador SMS Cliente:</span>
+                <input
+                  type="text"
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(e.target.value)}
+                  className="rounded-lg border border-pink-200 bg-white px-2 py-0.5 font-mono text-[11px] text-[#2d1822] focus:outline-pink-400"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBookingDialogOpen(true)}
+                className="text-[11px] font-bold text-[#e0446e] hover:underline"
+              >
+                + Cita Manual
+              </button>
+            </div>
+
+            {/* Chat Input Field (Thumb-Optimized) */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendTextMessage();
+              }}
+              className="flex items-center gap-2 rounded-2xl border border-pink-200/90 bg-[#fffdfb] p-1.5 shadow-md shadow-pink-500/5"
+            >
+              <input
+                type="text"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                placeholder="Escribe a Camila (ej. ¿Qué fechas tienen?)..."
+                disabled={isSending}
+                className="flex-1 bg-transparent px-3 py-2 text-xs text-[#2d1822] placeholder:text-[#a0828c] focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={isSending || !inputMessage.trim()}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-[#e0446e] to-[#c52752] text-white shadow transition hover:opacity-95 active:scale-95 disabled:opacity-40"
+                aria-label="Enviar mensaje"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* TAB 2: STUDIO CALENDAR & AVAILABLE SLOTS */}
+        {mobileTab === "calendar" && (
+          <div className="flex flex-col gap-3">
+            {/* Package Selector */}
+            <div className="rounded-3xl border border-pink-200/80 bg-[#fffdfb] p-3.5 shadow-sm">
+              <label className="text-xs font-bold text-[#2d1822]">
+                Selecciona tu Paquete Fotográfico:
+              </label>
+              <select
+                value={selectedServiceId}
+                onChange={(e) => {
+                  setSelectedServiceId(e.target.value);
+                  fetchScheduleData(selectedDate, e.target.value);
+                }}
+                className="mt-1.5 w-full rounded-2xl border border-pink-200 bg-pink-50/40 p-2.5 text-xs font-semibold text-[#2d1822] focus:outline-pink-400"
+              >
+                {services.map((svc) => (
+                  <option key={svc.id} value={svc.id}>
+                    {svc.name} (${svc.price.toLocaleString("es-MX")} MXN • {svc.durationMinutes}m)
+                  </option>
+                ))}
+              </select>
+
+              {selectedServiceObj && (
+                <div className="mt-2.5 rounded-2xl bg-[#faf3ec] p-2.5 text-xs text-[#5e3347]">
+                  <p className="font-semibold">{selectedServiceObj.description}</p>
+                  <div className="mt-1.5 flex flex-wrap gap-2 text-[11px] font-bold text-[#c52752]">
+                    <span>⏱ {selectedServiceObj.durationMinutes} minutos</span>
+                    <span>💰 ${selectedServiceObj.price.toLocaleString("es-MX")} MXN</span>
+                    <span>💳 Anticipo: ${selectedServiceObj.depositAmount.toLocaleString("es-MX")} MXN</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Date Picker Carousel (Horizontal Date Buttons) */}
+            <div className="rounded-3xl border border-pink-200/80 bg-[#fffdfb] p-3.5 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-[#2d1822] flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-[#e0446e]" /> Días Abiertos de Estudio:
+                </span>
+                <span className="text-[10px] font-semibold text-[#7b5965]">Mar–Sáb</span>
+              </div>
+
+              <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                {nextOpenDates.map((dateStr) => {
+                  const isSelected = selectedDate === dateStr;
+                  return (
+                    <button
+                      key={dateStr}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDate(dateStr);
+                        fetchScheduleData(dateStr, selectedServiceId);
+                      }}
+                      className={`flex shrink-0 flex-col items-center justify-center rounded-2xl px-3.5 py-2.5 text-xs transition active:scale-95 ${
+                        isSelected
+                          ? "bg-gradient-to-r from-[#e0446e] to-[#c52752] text-white shadow-md shadow-pink-500/20 font-bold"
+                          : "border border-pink-200 bg-[#faf3ec]/60 text-[#5e3347] hover:bg-pink-50"
+                      }`}
+                    >
+                      <span className="text-[10px] uppercase tracking-wide">
+                        {formatPrettyDate(dateStr).split(",")[0]}
                       </span>
-                      <span className="mt-0.5 text-xs font-bold sm:text-sm">
-                        {day.date.slice(5)}
-                      </span>
-                      <span
-                        className={`mt-1.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
-                          !day.isOpen
-                            ? "bg-slate-800/80 text-slate-400"
-                            : day.availableSlots.length > 0
-                              ? "bg-emerald-500/20 text-emerald-300"
-                              : "bg-amber-500/20 text-amber-300"
-                        }`}
-                      >
-                        {day.isOpen ? `${day.availableSlots.length} open` : "Closed"}
-                      </span>
+                      <span className="text-sm font-extrabold">{dateStr.slice(8)}</span>
+                      <span className="text-[9px] opacity-80">{dateStr.slice(5, 7)}</span>
                     </button>
                   );
                 })}
               </div>
-
-              {/* Selected Package Context Pill */}
-              {selectedServiceObj && (
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-3.5 py-2 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-amber-300">
-                      {selectedServiceObj.name}
-                    </span>
-                    <span className="text-slate-400">
-                      • {selectedServiceObj.durationMinutes} mins • $
-                      {selectedServiceObj.price} (${selectedServiceObj.depositAmount} deposit)
-                    </span>
-                  </div>
-                  <span className="text-[11px] text-slate-400">
-                    {formatPrettyDate(selectedDate || firstOpenDate)}
-                  </span>
-                </div>
-              )}
-
-              {/* Tactile Time Slots Grid */}
-              <div className="slot-grid-container mt-3.5">
-                {!dayAvailability?.isOpen ? (
-                  <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 text-center text-xs text-slate-400">
-                    Lumina Studio is closed on {dayAvailability?.dayName}s (
-                    {selectedDate}). Tap any Tuesday–Saturday date card above to browse
-                    open photo shoot slots.
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                    {dayAvailability.allSlots.map((slot) => (
-                      <button
-                        key={slot.startTime}
-                        type="button"
-                        disabled={!slot.available || isSending}
-                        onClick={() => {
-                          const svc = services.find((s) => s.id === selectedServiceId);
-                          sendTextMessage(
-                            `Can I book the ${svc?.name || "Portrait Session"} on ${selectedDate} at ${formatTime12h(
-                              slot.startTime,
-                            )}? My name is Sam Morgan and my email is sam@morgan.co`,
-                          );
-                        }}
-                        className={`group flex min-h-[56px] flex-col items-start justify-between rounded-2xl border px-3.5 py-2.5 text-left text-xs transition active:scale-[0.98] ${
-                          slot.available
-                            ? "border-emerald-500/25 bg-emerald-500/[0.08] text-emerald-100 hover:border-emerald-400 hover:bg-emerald-500/20"
-                            : "cursor-not-allowed border-white/[0.06] bg-white/[0.02] text-slate-500"
-                        }`}
-                      >
-                        <div className="flex w-full items-center justify-between">
-                          <span className="text-[13px] font-bold">
-                            {formatTime12h(slot.startTime)}
-                          </span>
-                          {slot.available ? (
-                            <span className="h-2 w-2 rounded-full bg-emerald-400 transition group-hover:scale-125" />
-                          ) : (
-                            <span className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[9px] text-slate-400">
-                              {slot.conflictRef}
-                            </span>
-                          )}
-                        </div>
-                        <span className="mt-1 text-[10px] opacity-85">
-                          {slot.available
-                            ? "Open • Tap to SMS Book"
-                            : "Reserved Session"}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
 
-            {/* =================================================================
-                PANEL B: Studio Appointments Schedule (Responsive Table + Cards)
-                Visible on mobile when mobileTab === "bookings",
-                and on desktop when studioPanelTab is "all" or "bookings"
-               ================================================================= */}
-            <div
-              className={`${
-                mobileTab === "bookings" ? "block" : "hidden"
-              } ${
-                studioPanelTab === "all" || studioPanelTab === "bookings"
-                  ? "lg:block"
-                  : "lg:hidden"
-              } rounded-3xl border border-white/[0.09] bg-[#10131f] p-4 shadow-lg sm:p-5`}
-            >
-              <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
+            {/* Real-time Time Slots Grid */}
+            <div className="rounded-3xl border border-pink-200/80 bg-[#fffdfb] p-3.5 shadow-sm">
+              <div className="flex items-center justify-between mb-2.5">
                 <div>
-                  <h2 className="text-sm font-bold text-white sm:text-base">
-                    Studio Appointments Schedule
-                  </h2>
-                  <p className="text-xs text-slate-400">
-                    Synced in real time with SMS bookings, upgrades, and cancellations
+                  <h3 className="text-xs font-bold text-[#2d1822]">
+                    Horarios Disponibles para el {formatPrettyDate(selectedDate || firstOpenDate)}:
+                  </h3>
+                  <p className="text-[10px] text-[#7b5965]">
+                    Incluye 15m de ajuste y ambientación entre sesiones
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-slate-200">
-                    {appointments.length} Bookings
-                  </span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => fetchScheduleData(selectedDate, selectedServiceId)}
+                  className="rounded-xl p-1.5 text-[#7b5965] hover:text-[#e0446e]"
+                  title="Actualizar horarios"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </button>
               </div>
 
-              <div
-                tabIndex={0}
-                role="region"
-                aria-labelledby="appointments-table-caption"
-                className="table-wrapper"
-              >
-                <table className="studio-table text-left text-xs">
-                  <caption id="appointments-table-caption" className="sr-only">
-                    Upcoming photo studio appointments and client bookings
-                  </caption>
-                  <thead>
-                    <tr className="border-b border-white/10 text-[11px] uppercase tracking-wider text-slate-400">
-                      <th className="px-3.5 py-3">Client / Ref</th>
-                      <th className="px-3.5 py-3">Package &amp; Add-Ons</th>
-                      <th className="px-3.5 py-3">Schedule</th>
-                      <th className="px-3.5 py-3">Contact</th>
-                      <th className="px-3.5 py-3">Status</th>
-                      <th className="px-3.5 py-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/10">
-                    {appointments.map((apt) => (
-                      <tr
-                        key={apt.id}
-                        className="transition hover:bg-white/[0.02]"
-                      >
-                        <th className="px-3.5 py-3 font-medium text-white">
-                          <div className="flex items-center justify-between gap-2 sm:justify-start">
-                            <span className="rounded-md bg-amber-500/20 px-1.5 py-0.5 font-mono text-[10px] font-bold text-amber-300">
-                              {apt.bookingRef}
-                            </span>
-                            <span className="font-semibold">{apt.clientName}</span>
-                          </div>
-                          {apt.photographerName && (
-                            <div className="mt-1 inline-flex items-center gap-1 text-[10px] text-slate-400">
-                              <Camera className="h-3 w-3 text-amber-400" />
-                              <span>{apt.photographerName}</span>
-                            </div>
-                          )}
-                        </th>
-                        <td className="px-3.5 py-3 text-slate-200">
-                          <div>
-                            <div className="font-medium">{apt.serviceName}</div>
-                            <div className="text-[11px] text-slate-400">
-                              {apt.durationMinutes}m • ${apt.price}
-                            </div>
-                            {apt.addOns && apt.addOns.length > 0 && (
-                              <div className="mt-1 flex flex-wrap justify-end gap-1 sm:justify-start">
-                                {apt.addOns.map((addonId) => {
-                                  const foundAddon = addOns.find(
-                                    (a) => a.id === addonId || a.name === addonId,
-                                  );
-                                  return (
-                                    <span
-                                      key={addonId}
-                                      className="rounded-md bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-medium text-violet-300"
-                                    >
-                                      +{foundAddon ? foundAddon.name : addonId}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-3.5 py-3 text-slate-200">
-                          <div>
-                            <div className="font-medium">
-                              {formatPrettyDate(apt.date)}
-                            </div>
-                            <div className="text-[11px] text-slate-400">
-                              {formatTime12h(apt.startTime)} –{" "}
-                              {formatTime12h(apt.endTime)}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-3.5 py-3 text-slate-300">
-                          <div>
-                            <div>{apt.clientPhone}</div>
-                            <div className="truncate text-[11px] text-slate-400">
-                              {apt.clientEmail}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-3.5 py-3">
-                          <div className="flex flex-col items-end gap-1 sm:items-start">
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
-                                apt.status === "confirmed"
-                                  ? "bg-emerald-500/15 text-emerald-300"
-                                  : apt.status === "rescheduled"
-                                    ? "bg-cyan-500/15 text-cyan-300"
-                                    : "bg-rose-500/15 text-rose-300"
-                              }`}
-                            >
-                              {apt.status === "confirmed" && (
-                                <CheckCircle2 className="h-3 w-3" />
-                              )}
-                              {apt.status === "cancelled" && (
-                                <XCircle className="h-3 w-3" />
-                              )}
-                              {apt.status}
-                            </span>
-                            {apt.prepGuideSent && (
-                              <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-medium text-amber-300">
-                                <FileCheck2 className="h-2.5 w-2.5" />
-                                Prep &amp; Deposit Sent
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-3.5 py-3 text-right">
-                          {apt.status !== "cancelled" && (
-                            <div className="inline-flex items-center gap-1.5">
-                              {!apt.prepGuideSent && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    sendTextMessage(
-                                      `Can you send the prep checklist and deposit link for booking ${apt.bookingRef}?`,
-                                    )
-                                  }
-                                  className="inline-flex items-center gap-1 rounded-xl border border-amber-500/25 bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-medium text-amber-200 transition hover:bg-amber-500/20"
-                                  title={`Send Prep Guide for ${apt.bookingRef}`}
-                                >
-                                  <FileCheck2 className="h-3 w-3" />
-                                  <span>Prep</span>
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => handleCancelBooking(apt.bookingRef)}
-                                className="inline-flex items-center gap-1 rounded-xl border border-rose-500/25 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-medium text-rose-300 transition hover:bg-rose-500/20"
-                                title={`Cancel ${apt.bookingRef}`}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                                <span>Cancel</span>
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {dayAvailability && dayAvailability.availableSlots.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {dayAvailability.availableSlots.map((slot) => (
+                    <button
+                      key={slot.startTime}
+                      type="button"
+                      onClick={() => {
+                        sendTextMessage(
+                          `Hola Camila, aparta mi cita para ${selectedServiceObj?.name || "sesión"} el ${selectedDate} a las ${formatTime12h(slot.startTime)} a nombre de ${formName || "Fernanda Castillo"}, correo ${formEmail || "fernanda.castillo@gmail.com"}`,
+                        );
+                      }}
+                      className="flex items-center justify-between rounded-2xl border border-pink-200/90 bg-[#faf3ec]/50 p-2.5 text-xs font-semibold text-[#2d1822] hover:border-pink-400 hover:bg-pink-50 active:scale-95 transition"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 text-[#e0446e]" />
+                        <span>{formatTime12h(slot.startTime)}</span>
+                      </div>
+                      <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800">
+                        Libre
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl bg-amber-50 p-3 text-center text-xs text-amber-800 border border-amber-200">
+                  <p className="font-semibold">No hay horarios libres para esta fecha.</p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      sendTextMessage(
+                        `Hola Camila, por favor anótame en lista de espera para el ${selectedDate} en cualquier horario disponible.`,
+                      )
+                    }
+                    className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#e0446e] px-3 py-1 text-xs font-bold text-white shadow"
+                  >
+                    <BellRing className="h-3 w-3" /> Anotarme a Lista de Espera
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: BOOKINGS & WAITLIST MANAGEMENT */}
+        {mobileTab === "bookings" && (
+          <div className="flex flex-col gap-3">
+            {/* Header with Quick Action */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-[#2d1822]">Citas Confirmadas en Estudio</h2>
+                <p className="text-[11px] text-[#7b5965]">
+                  {confirmedAppointments.length} sesiones activas • Total: ${totalScheduledRevenue.toLocaleString("es-MX")} MXN
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setIsBookingDialogOpen(true)}
+                className="inline-flex items-center gap-1 rounded-2xl bg-gradient-to-r from-[#e0446e] to-[#c52752] px-3 py-1.5 text-xs font-bold text-white shadow active:scale-95"
+              >
+                <Plus className="h-3.5 w-3.5" /> Nueva
+              </button>
             </div>
 
-            {/* =================================================================
-                PANEL C: Priority Waitlist & Studio Creative Team / Add-Ons
-                Visible on mobile when mobileTab === "bookings",
-                and on desktop when studioPanelTab is "all" or "team"
-               ================================================================= */}
-            <div
-              className={`${
-                mobileTab === "bookings" ? "grid" : "hidden"
-              } ${
-                studioPanelTab === "all" || studioPanelTab === "team"
-                  ? "lg:grid"
-                  : "lg:hidden"
-              } grid-cols-1 gap-4 md:grid-cols-2`}
-            >
-              {/* Priority Waitlist Card */}
-              <article className="rounded-3xl border border-white/[0.09] bg-[#10131f] p-4 shadow-lg sm:p-5">
-                <header className="mb-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <BellRing className="h-4 w-4 text-amber-400" />
-                    <h2 className="text-sm font-bold text-white">
-                      Priority Waitlist Queue
-                    </h2>
-                  </div>
-                  <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-semibold text-amber-300">
-                    {waitlist.length} Active
-                  </span>
-                </header>
-                <p className="mb-3 text-xs text-slate-400">
-                  Auto-alerts waitlisted clients when a booking on their requested date is cancelled.
-                </p>
-                <div className="space-y-2.5">
-                  {waitlist.map((wl) => (
-                    <div
-                      key={wl.id}
-                      className="flex items-center justify-between gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-2.5 text-xs"
-                    >
-                      <div className="min-w-0">
+            {/* List of Confirmed Appointments */}
+            <div className="flex flex-col gap-2.5">
+              {appointments.map((apt) => {
+                const isCancelled = apt.status === "cancelled";
+                return (
+                  <div
+                    key={apt.id}
+                    className={`rounded-3xl border p-3.5 shadow-sm transition ${
+                      isCancelled
+                        ? "border-slate-200 bg-slate-50/70 opacity-60"
+                        : "border-pink-200/90 bg-[#fffdfb]"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 border-b border-pink-100 pb-2.5">
+                      <div>
                         <div className="flex items-center gap-2">
-                          <span className="rounded bg-amber-500/20 px-1.5 py-0.5 font-mono text-[10px] font-bold text-amber-300">
-                            {wl.waitlistRef}
+                          <span className="font-bold text-sm text-[#2d1822]">
+                            {apt.clientName}
                           </span>
-                          <span className="truncate font-semibold text-white">
-                            {wl.clientName}
+                          <span className="rounded-full bg-pink-100 px-2 py-0.5 font-mono text-[10px] font-extrabold text-[#c52752]">
+                            {apt.bookingRef}
                           </span>
                         </div>
-                        <div className="mt-0.5 truncate text-[11px] text-slate-400">
-                          {wl.serviceName} • {formatPrettyDate(wl.preferredDate)} (
-                          {wl.preferredTimeWindow})
-                        </div>
+                        <p className="text-xs font-semibold text-[#e0446e] mt-0.5">
+                          {apt.serviceName}
+                        </p>
                       </div>
                       <span
-                        className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase ${
-                          wl.status === "slot_opened"
-                            ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40"
-                            : "bg-slate-800 text-slate-300"
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          isCancelled
+                            ? "bg-slate-200 text-slate-700"
+                            : apt.status === "rescheduled"
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-emerald-100 text-emerald-800"
                         }`}
                       >
-                        {wl.status === "slot_opened" ? "Slot Opened!" : "Waiting"}
+                        {apt.status === "confirmed"
+                          ? "Confirmada"
+                          : apt.status === "rescheduled"
+                            ? "Reprogramada"
+                            : "Cancelada"}
                       </span>
                     </div>
-                  ))}
-                </div>
-              </article>
 
-              {/* Studio Creative Team & Add-On Upgrades Card */}
-              <article className="rounded-3xl border border-white/[0.09] bg-[#10131f] p-4 shadow-lg sm:p-5">
-                <header className="mb-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Camera className="h-4 w-4 text-amber-400" />
-                    <h2 className="text-sm font-bold text-white">
-                      Photographers &amp; Add-Ons
-                    </h2>
-                  </div>
-                  <span className="rounded-full bg-indigo-500/15 px-2.5 py-0.5 text-[10px] font-semibold text-indigo-300">
-                    3 Studios
-                  </span>
-                </header>
-                <div className="space-y-2">
-                  {photographers.map((p) => (
-                    <div
-                      key={p.id}
-                      className="flex items-center justify-between gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-xs"
-                    >
-                      <div className="min-w-0">
-                        <div className="truncate font-semibold text-white">
-                          {p.name}{" "}
-                          <span className="font-normal text-slate-400">
-                            • {p.role}
-                          </span>
-                        </div>
-                        <div className="truncate text-[10px] text-slate-400">
-                          {p.specialties.join(" • ")}
-                        </div>
+                    <div className="mt-2.5 grid grid-cols-2 gap-2 text-xs text-[#5e3347]">
+                      <div>
+                        <p className="text-[10px] text-[#7b5965]">Fecha &amp; Hora:</p>
+                        <p className="font-semibold text-[#2d1822]">
+                          {formatPrettyDate(apt.date)}
+                        </p>
+                        <p className="font-mono text-[11px]">
+                          {formatTime12h(apt.startTime)} – {formatTime12h(apt.endTime)}
+                        </p>
                       </div>
-                      <span className="shrink-0 rounded-lg bg-white/5 px-2 py-0.5 text-[10px] font-medium text-amber-300">
-                        {p.assignedRoom.split("—")[0].trim()}
-                      </span>
+                      <div>
+                        <p className="text-[10px] text-[#7b5965]">Fotógrafo Asignado:</p>
+                        <p className="font-semibold text-[#2d1822]">
+                          {apt.photographerName || "Sofía Morales"}
+                        </p>
+                        <p className="text-[11px] font-bold text-[#c52752]">
+                          ${apt.price.toLocaleString("es-MX")} MXN
+                        </p>
+                      </div>
+                    </div>
+
+                    {apt.notes && (
+                      <p className="mt-2 rounded-xl bg-[#faf3ec] p-2 text-[11px] text-[#7b5965]">
+                        <span className="font-bold">Notas:</span> {apt.notes}
+                      </p>
+                    )}
+
+                    {!isCancelled && (
+                      <div className="mt-3 flex items-center justify-end gap-2 border-t border-pink-50 pt-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            sendTextMessage(
+                              `¿Me puedes enviar la guía de preparación y vestuario para la cita ${apt.bookingRef}?`,
+                            )
+                          }
+                          className="rounded-xl border border-pink-200 px-2.5 py-1 text-[11px] font-semibold text-[#7b5965] hover:bg-pink-50"
+                        >
+                          Guía &amp; Anticipo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCancelBooking(apt.bookingRef)}
+                          className="rounded-xl border border-rose-200 bg-rose-50/50 px-2.5 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-100"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Priority Waitlist Section */}
+            <div className="rounded-3xl border border-pink-200/80 bg-[#fffdfb] p-3.5 shadow-sm mt-2">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-bold text-[#2d1822] flex items-center gap-1.5">
+                  <BellRing className="h-3.5 w-3.5 text-[#e0446e]" /> Lista de Espera Prioritaria:
+                </h3>
+                <span className="rounded-full bg-pink-100 px-2 py-0.5 text-[10px] font-bold text-[#c52752]">
+                  {waitlist.length} en espera
+                </span>
+              </div>
+
+              {waitlist.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {waitlist.map((w) => (
+                    <div
+                      key={w.id}
+                      className="rounded-2xl border border-pink-100 bg-[#fdf2f4]/60 p-2.5 text-xs"
+                    >
+                      <div className="flex items-center justify-between font-semibold">
+                        <span className="text-[#2d1822]">{w.clientName}</span>
+                        <span className="font-mono text-[10px] text-[#9e193e]">
+                          {w.waitlistRef}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#7b5965] mt-0.5">
+                        {w.serviceName} • {formatPrettyDate(w.preferredDate)} ({w.preferredTimeWindow})
+                      </p>
+                      <div className="mt-1 flex items-center justify-between text-[10px]">
+                        <span className="font-mono text-[#a0828c]">{w.clientPhone}</span>
+                        <span
+                          className={`font-bold ${
+                            w.status === "slot_opened"
+                              ? "text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded"
+                              : "text-[#c52752]"
+                          }`}
+                        >
+                          {w.status === "slot_opened"
+                            ? "¡Horario Libre Detectado!"
+                            : "Esperando Horario"}
+                        </span>
+                      </div>
                     </div>
                   ))}
-                  <div className="pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                    Tap an Add-On to Quote via SMS
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {addOns.map((a) => (
-                      <button
-                        key={a.id}
-                        type="button"
-                        onClick={() =>
-                          sendTextMessage(
-                            `Can you give me a quote for a Signature Portrait with ${a.name}?`,
-                          )
-                        }
-                        className="rounded-xl border border-violet-500/25 bg-violet-500/10 px-2.5 py-1 text-[11px] font-medium text-violet-200 transition hover:bg-violet-500/20 active:scale-95"
-                      >
-                        {a.name} (+${a.price})
-                      </button>
-                    ))}
-                  </div>
                 </div>
-              </article>
+              ) : (
+                <p className="text-center text-xs text-[#7b5965] py-2">
+                  No hay solicitudes en lista de espera actualmente.
+                </p>
+              )}
             </div>
-          </section>
-        </div>
+          </div>
+        )}
+
+        {/* TAB 4: STUDIO PACKAGES, TEAM & BACKDROPS */}
+        {mobileTab === "studio" && (
+          <div className="flex flex-col gap-3">
+            {/* Studio Introduction */}
+            <div className="rounded-3xl border border-pink-200/80 bg-[#fffdfb] p-4 shadow-sm">
+              <h2 className="text-sm font-extrabold text-[#2d1822]">
+                juntosxsiempre • Estudio Fotográfico
+              </h2>
+              <p className="text-xs text-[#7b5965] mt-1 leading-relaxed">
+                Ubicados en Álvaro Obregón 168, Roma Norte, Ciudad de México. Especialistas en
+                retratos editoriales, sesiones de amor y pareja, y momentos inolvidables de familia y quinceañeras con luz natural y ciclorama.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-[#9e193e]">
+                <span className="rounded-full bg-pink-100 px-2.5 py-1">📍 Roma Norte, CDMX</span>
+                <span className="rounded-full bg-pink-100 px-2.5 py-1">⚡ Equipo Profoto Pro-11</span>
+                <span className="rounded-full bg-pink-100 px-2.5 py-1">🎨 Fondos Artesanales</span>
+              </div>
+            </div>
+
+            {/* Packages Catalog */}
+            <div className="rounded-3xl border border-pink-200/80 bg-[#fffdfb] p-3.5 shadow-sm">
+              <h3 className="text-xs font-bold text-[#2d1822] mb-2 flex items-center gap-1.5">
+                <Heart className="h-3.5 w-3.5 text-[#e0446e]" /> Paquetes de Sesiones:
+              </h3>
+              <div className="flex flex-col gap-2.5">
+                {services.map((svc) => (
+                  <div
+                    key={svc.id}
+                    className="rounded-2xl border border-pink-100 bg-[#faf3ec]/60 p-3 text-xs"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-bold text-[#2d1822]">{svc.name}</h4>
+                        <p className="text-[11px] text-[#7b5965] mt-0.5">{svc.description}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-sm font-extrabold text-[#c52752]">
+                          ${svc.price.toLocaleString("es-MX")} MXN
+                        </span>
+                        <p className="text-[10px] text-[#7b5965]">{svc.durationMinutes} minutos</p>
+                      </div>
+                    </div>
+                    <ul className="mt-2 flex flex-col gap-1 text-[11px] text-[#5e3347] border-t border-pink-100/60 pt-2">
+                      {svc.includes.map((inc, i) => (
+                        <li key={i} className="flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3 w-3 text-[#e0446e] shrink-0" />
+                          <span>{inc}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedServiceId(svc.id);
+                        setMobileTab("calendar");
+                      }}
+                      className="mt-2.5 w-full rounded-xl bg-gradient-to-r from-[#e0446e] to-[#c52752] py-1.5 text-center text-xs font-bold text-white shadow active:scale-95"
+                    >
+                      Ver Fechas Disponibles
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Studio Add-Ons Catalog */}
+            <div className="rounded-3xl border border-pink-200/80 bg-[#fffdfb] p-3.5 shadow-sm">
+              <h3 className="text-xs font-bold text-[#2d1822] mb-2 flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-[#e0446e]" /> Complementos Opcionales (Add-Ons):
+              </h3>
+              <div className="flex flex-col gap-2">
+                {addOns.map((add) => (
+                  <div
+                    key={add.id}
+                    className="flex items-center justify-between gap-2 rounded-2xl border border-pink-100 bg-[#fdf2f4]/50 p-2.5 text-xs"
+                  >
+                    <div>
+                      <p className="font-bold text-[#2d1822]">{add.name}</p>
+                      <p className="text-[10px] text-[#7b5965] mt-0.5">{add.description}</p>
+                    </div>
+                    <span className="shrink-0 font-extrabold text-[#c52752] text-xs">
+                      +${add.price.toLocaleString("es-MX")} MXN
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Photographers Showcase */}
+            <div className="rounded-3xl border border-pink-200/80 bg-[#fffdfb] p-3.5 shadow-sm">
+              <h3 className="text-xs font-bold text-[#2d1822] mb-2 flex items-center gap-1.5">
+                <Camera className="h-3.5 w-3.5 text-[#e0446e]" /> Equipo de Fotógrafos:
+              </h3>
+              <div className="flex flex-col gap-2.5">
+                {photographers.map((p) => (
+                  <div key={p.id} className="rounded-2xl border border-pink-100 bg-white p-3 text-xs">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-[#2d1822]">{p.name}</h4>
+                      <span className="text-[10px] font-bold text-[#e0446e]">{p.role}</span>
+                    </div>
+                    <p className="text-[11px] text-[#7b5965] mt-1">{p.bio}</p>
+                    <div className="mt-2 flex flex-wrap gap-1 text-[10px]">
+                      {p.specialties.map((spec, i) => (
+                        <span key={i} className="rounded-md bg-pink-50 px-2 py-0.5 text-[#9e193e] font-medium">
+                          {spec}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Backdrops Showcase */}
+            <div className="rounded-3xl border border-pink-200/80 bg-[#fffdfb] p-3.5 shadow-sm">
+              <h3 className="text-xs font-bold text-[#2d1822] mb-2 flex items-center gap-1.5">
+                <Palette className="h-3.5 w-3.5 text-[#e0446e]" /> Fondos &amp; Sets Disponibles:
+              </h3>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {backdrops.map((bd, i) => (
+                  <div
+                    key={i}
+                    className="flex flex-col justify-between rounded-2xl border border-pink-100 bg-[#faf3ec]/60 p-2.5"
+                  >
+                    <span className="text-[10px] font-mono text-[#c98894]">Set #{i + 1}</span>
+                    <span className="font-semibold text-[#2d1822] mt-1">{bd}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
-      {/* =====================================================================
-          MOBILE BOTTOM NAVIGATION BAR (lg:hidden)
-          Provides native app ergonomics on phones without vertical scroll fatigue
-         ===================================================================== */}
-      <nav
-        aria-label="Mobile Workspace Navigation"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#0b0d14]/95 px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden"
-      >
-        <div className="mx-auto grid max-w-md grid-cols-3 gap-2">
+      {/* --- Thumb-Optimized Mobile Bottom Dock (Fixed 100% Mobile Priority) --- */}
+      <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-pink-200/80 bg-[#fffdfb]/95 backdrop-blur-xl mobile-safe-bottom">
+        <div className="mx-auto flex max-w-md items-center justify-around px-2 py-2">
           <button
             type="button"
             onClick={() => setMobileTab("chat")}
-            className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl py-2 text-xs font-semibold transition active:scale-95 ${
+            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-2xl transition active:scale-95 ${
               mobileTab === "chat"
-                ? "bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/30"
-                : "text-slate-400 hover:text-slate-200"
+                ? "text-[#e0446e] font-extrabold"
+                : "text-[#7b5965] font-medium hover:text-[#2d1822]"
             }`}
           >
-            <div className="relative">
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-xl ${
+                mobileTab === "chat" ? "bg-pink-100 shadow-sm" : ""
+              }`}
+            >
               <MessageSquare className="h-4 w-4" />
-              <span className="absolute -top-1 -right-2 h-2 w-2 rounded-full bg-emerald-400" />
             </div>
-            <span className="text-[11px]">SMS Agent</span>
+            <span className="text-[10px]">Chat SMS</span>
           </button>
 
           <button
             type="button"
             onClick={() => setMobileTab("calendar")}
-            className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl py-2 text-xs font-semibold transition active:scale-95 ${
+            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-2xl transition active:scale-95 ${
               mobileTab === "calendar"
-                ? "bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/30"
-                : "text-slate-400 hover:text-slate-200"
+                ? "text-[#e0446e] font-extrabold"
+                : "text-[#7b5965] font-medium hover:text-[#2d1822]"
             }`}
           >
-            <div className="relative">
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-xl ${
+                mobileTab === "calendar" ? "bg-pink-100 shadow-sm" : ""
+              }`}
+            >
               <Calendar className="h-4 w-4" />
-              <span className=" -top-1.5 -right-3.5 absolute rounded-full bg-emerald-500/20 px-1 text-[9px] font-bold text-emerald-300">
-                {dayAvailability?.availableSlots.length ?? 0}
-              </span>
             </div>
-            <span className="text-[11px]">Live Slots</span>
+            <span className="text-[10px]">Agenda</span>
           </button>
 
           <button
             type="button"
             onClick={() => setMobileTab("bookings")}
-            className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl py-2 text-xs font-semibold transition active:scale-95 ${
+            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-2xl transition active:scale-95 ${
               mobileTab === "bookings"
-                ? "bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/30"
-                : "text-slate-400 hover:text-slate-200"
+                ? "text-[#e0446e] font-extrabold"
+                : "text-[#7b5965] font-medium hover:text-[#2d1822]"
             }`}
           >
-            <div className="relative">
-              <Users className="h-4 w-4" />
-              <span className="-top-1.5 -right-3.5 absolute rounded-full bg-amber-500/20 px-1 text-[9px] font-bold text-amber-300">
-                {confirmedAppointments.length}
-              </span>
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-xl ${
+                mobileTab === "bookings" ? "bg-pink-100 shadow-sm" : ""
+              }`}
+            >
+              <FileCheck2 className="h-4 w-4" />
             </div>
-            <span className="text-[11px]">Bookings &amp; Team</span>
+            <span className="text-[10px]">Citas</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobileTab("studio")}
+            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-2xl transition active:scale-95 ${
+              mobileTab === "studio"
+                ? "text-[#e0446e] font-extrabold"
+                : "text-[#7b5965] font-medium hover:text-[#2d1822]"
+            }`}
+          >
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-xl ${
+                mobileTab === "studio" ? "bg-pink-100 shadow-sm" : ""
+              }`}
+            >
+              <Camera className="h-4 w-4" />
+            </div>
+            <span className="text-[10px]">Estudio</span>
           </button>
         </div>
       </nav>
 
-      {/* DIALOG 1: Seamless Multi-LLM Provider & API Key Switcher */}
+      {/* --- DIALOG 1: LLM Routing & API Keys --- */}
       <LightDismissDialog
         open={isProviderDialogOpen}
         onClose={() => setIsProviderDialogOpen(false)}
-        title="Multi-LLM Routing & Model Overrides"
-        subtitle="Seamlessly switch between Google Gemini and OpenRouter with automatic failover."
+        title="Enrutamiento de IA & Llaves de API"
+        subtitle="Configura el modo de operación entre Google Gemini y OpenRouter con conmutación por falla automática."
       >
-        <div className="space-y-4 text-xs">
+        <div className="flex flex-col gap-3 text-xs">
           <div>
-            <label
-              htmlFor="dialog-provider-mode"
-              className="block font-medium text-slate-200"
-            >
-              Active Routing Strategy
-            </label>
+            <label className="font-bold text-[#2d1822]">Modo de Enrutamiento:</label>
             <select
-              id="dialog-provider-mode"
               value={providerMode}
               onChange={(e) => setProviderMode(e.target.value as ProviderMode)}
-              className="mt-1.5 h-10 w-full rounded-xl border border-white/15 bg-[#171b2b] px-3 text-xs text-white focus:border-amber-400 focus:outline-none"
+              className="mt-1 w-full rounded-2xl border border-pink-200 bg-pink-50/50 p-2.5 font-semibold text-[#2d1822] focus:outline-pink-400"
             >
-              {Object.entries(PROVIDER_MODE_LABELS).map(([key, info]) => (
-                <option key={key} value={key} className="bg-[#171b2b]">
-                  {info.label}
-                </option>
-              ))}
+              <option value="gemini-with-fallback">Gemini Primario ⇄ OpenRouter Fallback</option>
+              <option value="openrouter-with-fallback">OpenRouter Primario ⇄ Gemini Fallback</option>
+              <option value="gemini-only">Google Gemini Estricto</option>
+              <option value="openrouter-only">OpenRouter Estricto</option>
             </select>
-            <p className="mt-1.5 text-[11px] text-slate-400">
-              {PROVIDER_MODE_LABELS[providerMode].desc}
+            <p className="mt-1 text-[11px] text-[#7b5965]">
+              {PROVIDER_MODE_LABELS[providerMode]?.desc}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3.5">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-white">Google Gemini</span>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                    geminiKey || serverKeyStatus.geminiConfigured
-                      ? "bg-emerald-500/20 text-emerald-300"
-                      : "bg-slate-800 text-slate-400"
-                  }`}
-                >
-                  {geminiKey
-                    ? "Runtime Key"
-                    : serverKeyStatus.geminiConfigured
-                      ? "Env Key Active"
-                      : "Not Set"}
-                </span>
-              </div>
-              <label
-                htmlFor="gemini-api-key-input"
-                className="mt-2 block text-[11px] text-slate-400"
-              >
-                GEMINI_API_KEY (Optional runtime override)
-              </label>
+          <div className="rounded-2xl border border-pink-100 bg-[#faf3ec] p-3">
+            <label className="font-bold text-[#2d1822]">Google Gemini API Key:</label>
+            <input
+              type="password"
+              value={geminiKey}
+              onChange={(e) => setGeminiKey(e.target.value)}
+              placeholder={serverKeyStatus.geminiConfigured ? "• Configurada en servidor (.env.local)" : "Pega tu Gemini API Key"}
+              className="mt-1 w-full rounded-xl border border-pink-200 bg-white p-2 font-mono text-xs text-[#2d1822]"
+            />
+          </div>
+
+          <div className="rounded-2xl border border-pink-100 bg-[#faf3ec] p-3">
+            <label className="font-bold text-[#2d1822]">OpenRouter API Key:</label>
+            <input
+              type="password"
+              value={openrouterKey}
+              onChange={(e) => setOpenrouterKey(e.target.value)}
+              placeholder={serverKeyStatus.openrouterConfigured ? "• Configurada en servidor (.env.local)" : "Pega tu OpenRouter API Key"}
+              className="mt-1 w-full rounded-xl border border-pink-200 bg-white p-2 font-mono text-xs text-[#2d1822]"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-2xl border border-pink-100 bg-[#faf3ec] p-2.5">
+              <label className="text-[11px] font-bold text-[#2d1822]">Modelo Gemini:</label>
               <input
-                id="gemini-api-key-input"
-                type="password"
-                value={geminiKey}
-                onChange={(e) => setGeminiKey(e.target.value)}
-                placeholder="AIzaSy..."
-                className="mt-1 h-9 w-full rounded-xl border border-white/10 bg-[#0c0e17] px-2.5 text-xs text-white"
-              />
-              <label
-                htmlFor="gemini-model-input"
-                className="mt-2 block text-[11px] text-slate-400"
-              >
-                Model Override (default: gemini-3.1-flash-lite-preview)
-              </label>
-              <input
-                id="gemini-model-input"
                 type="text"
                 value={geminiModel}
                 onChange={(e) => setGeminiModel(e.target.value)}
                 placeholder="gemini-2.5-flash"
-                className="mt-1 h-9 w-full rounded-xl border border-white/10 bg-[#0c0e17] px-2.5 text-xs text-white"
+                className="mt-1 w-full rounded-xl border border-pink-200 bg-white p-1.5 font-mono text-[10px] text-[#2d1822]"
               />
             </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3.5">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-white">OpenRouter</span>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                    openrouterKey || serverKeyStatus.openrouterConfigured
-                      ? "bg-emerald-500/20 text-emerald-300"
-                      : "bg-slate-800 text-slate-400"
-                  }`}
-                >
-                  {openrouterKey
-                    ? "Runtime Key"
-                    : serverKeyStatus.openrouterConfigured
-                      ? "Env Key Active"
-                      : "Not Set"}
-                </span>
-              </div>
-              <label
-                htmlFor="openrouter-api-key-input"
-                className="mt-2 block text-[11px] text-slate-400"
-              >
-                OPENROUTER_API_KEY (Optional runtime override)
-              </label>
+            <div className="rounded-2xl border border-pink-100 bg-[#faf3ec] p-2.5">
+              <label className="text-[11px] font-bold text-[#2d1822]">Modelo OpenRouter:</label>
               <input
-                id="openrouter-api-key-input"
-                type="password"
-                value={openrouterKey}
-                onChange={(e) => setOpenrouterKey(e.target.value)}
-                placeholder="sk-or-v1-..."
-                className="mt-1 h-9 w-full rounded-xl border border-white/10 bg-[#0c0e17] px-2.5 text-xs text-white"
-              />
-              <label
-                htmlFor="openrouter-model-input"
-                className="mt-2 block text-[11px] text-slate-400"
-              >
-                Model Override (e.g. openai/gpt-4o-mini)
-              </label>
-              <input
-                id="openrouter-model-input"
                 type="text"
                 value={openrouterModel}
                 onChange={(e) => setOpenrouterModel(e.target.value)}
-                placeholder="openai/gpt-4o-mini"
-                className="mt-1 h-9 w-full rounded-xl border border-white/10 bg-[#0c0e17] px-2.5 text-xs text-white"
+                placeholder="meta-llama/llama-3.3-70b-instruct"
+                className="mt-1 w-full rounded-xl border border-pink-200 bg-white p-1.5 font-mono text-[10px] text-[#2d1822]"
               />
             </div>
           </div>
 
-          <div className="flex justify-end pt-2">
+          {lastTelemetry && (
+            <div className="rounded-2xl border border-pink-200 bg-pink-50/70 p-3 text-[11px] text-[#5e3347]">
+              <p className="font-bold text-[#9e193e]">Última Telemetría de Ejecución:</p>
+              <p>• Proveedor Activo: {lastTelemetry.activeProvider}</p>
+              <p>• Latencia: {lastTelemetry.latencyMs} ms</p>
+              {lastTelemetry.fallbackTriggered && (
+                <p className="text-amber-700 font-bold">
+                  ⚠️ Failover Activado: {lastTelemetry.fallbackReason}
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="mt-2 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsWebhookDialogOpen(true)}
+              className="rounded-2xl border border-pink-200 px-3 py-2 text-xs font-semibold text-[#7b5965] hover:bg-pink-50"
+            >
+              Simular SMS Webhook
+            </button>
             <button
               type="button"
               onClick={() => setIsProviderDialogOpen(false)}
-              className="h-10 w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 text-xs font-bold text-slate-950 sm:w-auto"
+              className="rounded-2xl bg-gradient-to-r from-[#e0446e] to-[#c52752] px-4 py-2 font-bold text-white shadow"
             >
-              Save &amp; Apply Routing
+              Guardar &amp; Cerrar
             </button>
           </div>
         </div>
       </LightDismissDialog>
 
-      {/* DIALOG 2: Inbound SMS Webhook Inspector */}
-      <LightDismissDialog
-        open={isWebhookDialogOpen}
-        onClose={() => setIsWebhookDialogOpen(false)}
-        title="Twilio / SMS Webhook Integration"
-        subtitle="Connect your Vercel deployment directly to Twilio or any SMS gateway."
-        maxWidthClass="max-w-xl"
-      >
-        <div className="space-y-4 text-xs">
-          <div className="rounded-2xl border border-white/10 bg-[#0c0e17] p-3.5">
-            <p className="font-semibold text-amber-300">
-              Webhook Endpoint URL (POST):
-            </p>
-            <code className="mt-1.5 block overflow-x-auto rounded-lg bg-black/50 px-2.5 py-2 font-mono text-[11px] text-emerald-300">
-              https://schedule-agent-gold.vercel.app/api/webhook/sms
-            </code>
-            <p className="mt-2 text-[11px] text-slate-400">
-              Accepts standard Twilio{" "}
-              <code className="text-slate-200">
-                application/x-www-form-urlencoded
-              </code>{" "}
-              (<code className="text-slate-200">From</code> &amp;{" "}
-              <code className="text-slate-200">Body</code>) and returns TwiML XML, or{" "}
-              <code className="text-slate-200">application/json</code>.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="font-medium text-slate-200">
-              Live TwiML Webhook Response Test:
-            </span>
-            <button
-              type="button"
-              disabled={isTestingWebhook}
-              onClick={handleTestSmsWebhook}
-              className="h-9 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-xs font-bold text-slate-950 disabled:opacity-50"
-            >
-              {isTestingWebhook
-                ? "Testing /api/webhook/sms..."
-                : "Simulate Twilio POST"}
-            </button>
-          </div>
-
-          {webhookTestOutput && (
-            <pre className="max-h-48 overflow-auto rounded-2xl border border-white/10 bg-black/60 p-3 font-mono text-[11px] text-cyan-300">
-              {webhookTestOutput}
-            </pre>
-          )}
-        </div>
-      </LightDismissDialog>
-
-      {/* DIALOG 3: Manual Studio Booking Modal (validate-input-after-interaction) */}
+      {/* --- DIALOG 2: Manual Booking Dialog --- */}
       <LightDismissDialog
         open={isBookingDialogOpen}
         onClose={() => setIsBookingDialogOpen(false)}
-        title="Create Studio Appointment"
-        subtitle="Add a manual client booking directly onto the studio calendar."
+        title="Nueva Cita Manual en juntosxsiempre"
+        subtitle="Registra directamente una cita en la agenda de Roma Norte."
       >
-        <form
-          ref={bookingFormRef}
-          onSubmit={handleManualBookingSubmit}
-          className="space-y-3.5 text-xs"
-        >
-          <div className="field">
-            <label
-              htmlFor={`${formIdPrefix}-name`}
-              className="block font-medium text-slate-200"
-            >
-              Client Full Name
-            </label>
-            <span id={`${formIdPrefix}-name-hint`} className="field-hint">
-              Enter first and last name (at least 2 characters)
-            </span>
+        <form ref={bookingFormRef} onSubmit={handleManualBookingSubmit} className="flex flex-col gap-3 text-xs">
+          {formError && (
+            <div className="rounded-2xl bg-rose-50 border border-rose-200 p-2.5 text-xs text-rose-800">
+              {formError}
+            </div>
+          )}
+
+          <div>
+            <label className="font-bold text-[#2d1822]">Nombre Completo del Cliente:</label>
             <input
-              id={`${formIdPrefix}-name`}
               type="text"
               required
-              minLength={2}
-              autoComplete="name"
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
-              aria-describedby={`${formIdPrefix}-name-hint`}
-              aria-errormessage={`${formIdPrefix}-name-err`}
-              className="studio-input h-10 w-full rounded-xl border border-white/15 bg-[#0c0e17] px-3 text-xs text-white focus:outline-none"
+              placeholder="ej. Mariana Rivera"
+              className="studio-input mt-1 w-full rounded-2xl border border-pink-200 bg-pink-50/40 p-2.5 text-xs text-[#2d1822]"
             />
-            <div id={`${formIdPrefix}-name-err`} className="error-msg">
-              <span aria-hidden="true">❌ </span>Please enter the client&apos;s full name.
-            </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="field">
-              <label
-                htmlFor={`${formIdPrefix}-email`}
-                className="block font-medium text-slate-200"
-              >
-                Email Address
-              </label>
-              <span id={`${formIdPrefix}-email-hint`} className="field-hint">
-                Format: client@example.com
-              </span>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="font-bold text-[#2d1822]">Celular / WhatsApp:</label>
               <input
-                id={`${formIdPrefix}-email`}
-                type="email"
+                type="text"
                 required
-                autoComplete="email"
-                value={formEmail}
-                onChange={(e) => setFormEmail(e.target.value)}
-                aria-describedby={`${formIdPrefix}-email-hint`}
-                aria-errormessage={`${formIdPrefix}-email-err`}
-                className="studio-input h-10 w-full rounded-xl border border-white/15 bg-[#0c0e17] px-3 text-xs text-white focus:outline-none"
-              />
-              <div id={`${formIdPrefix}-email-err`} className="error-msg">
-                <span aria-hidden="true">❌ </span>Please enter a valid email address.
-              </div>
-            </div>
-
-            <div className="field">
-              <label
-                htmlFor={`${formIdPrefix}-phone`}
-                className="block font-medium text-slate-200"
-              >
-                Phone Number
-              </label>
-              <span id={`${formIdPrefix}-phone-hint`} className="field-hint">
-                Format: (555) 234-5678
-              </span>
-              <input
-                id={`${formIdPrefix}-phone`}
-                type="tel"
-                required
-                pattern="[\d\s\-\+\(\)]{7,20}"
-                autoComplete="tel"
                 value={formPhone}
                 onChange={(e) => setFormPhone(e.target.value)}
-                aria-describedby={`${formIdPrefix}-phone-hint`}
-                aria-errormessage={`${formIdPrefix}-phone-err`}
-                className="studio-input h-10 w-full rounded-xl border border-white/15 bg-[#0c0e17] px-3 text-xs text-white focus:outline-none"
-              />
-              <div id={`${formIdPrefix}-phone-err`} className="error-msg">
-                <span aria-hidden="true">❌ </span>Please enter a valid phone number.
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div>
-              <label
-                htmlFor={`${formIdPrefix}-service`}
-                className="block font-medium text-slate-200"
-              >
-                Package
-              </label>
-              <select
-                id={`${formIdPrefix}-service`}
-                value={formService}
-                onChange={(e) => setFormService(e.target.value)}
-                className="mt-1 h-10 w-full rounded-xl border border-white/15 bg-[#0c0e17] px-2.5 text-xs text-white"
-              >
-                {services.map((s) => (
-                  <option key={s.id} value={s.id} className="bg-[#0c0e17]">
-                    {s.shortName} (${s.price})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor={`${formIdPrefix}-date`}
-                className="block font-medium text-slate-200"
-              >
-                Shoot Date
-              </label>
-              <input
-                id={`${formIdPrefix}-date`}
-                type="date"
-                required
-                value={formDate}
-                onChange={(e) => setFormDate(e.target.value)}
-                className="mt-1 h-10 w-full rounded-xl border border-white/15 bg-[#0c0e17] px-2.5 text-xs text-white"
+                placeholder="+52 55 4910 2831"
+                className="studio-input mt-1 w-full rounded-2xl border border-pink-200 bg-pink-50/40 p-2.5 text-xs text-[#2d1822]"
               />
             </div>
-
             <div>
-              <label
-                htmlFor={`${formIdPrefix}-time`}
-                className="block font-medium text-slate-200"
-              >
-                Start Time
-              </label>
+              <label className="font-bold text-[#2d1822]">Correo Electrónico:</label>
               <input
-                id={`${formIdPrefix}-time`}
-                type="time"
+                type="email"
                 required
-                value={formTime}
-                onChange={(e) => setFormTime(e.target.value)}
-                className="mt-1 h-10 w-full rounded-xl border border-white/15 bg-[#0c0e17] px-2.5 text-xs text-white"
+                value={formEmail}
+                onChange={(e) => setFormEmail(e.target.value)}
+                placeholder="mariana@gmail.com"
+                className="studio-input mt-1 w-full rounded-2xl border border-pink-200 bg-pink-50/40 p-2.5 text-xs text-[#2d1822]"
               />
             </div>
           </div>
 
           <div>
-            <label
-              htmlFor={`${formIdPrefix}-notes`}
-              className="block font-medium text-slate-200"
+            <label className="font-bold text-[#2d1822]">Paquete Fotográfico:</label>
+            <select
+              value={formService}
+              onChange={(e) => setFormService(e.target.value)}
+              className="mt-1 w-full rounded-2xl border border-pink-200 bg-pink-50/40 p-2.5 text-xs font-semibold text-[#2d1822]"
             >
-              Session Notes (Optional)
-            </label>
-            <input
-              id={`${formIdPrefix}-notes`}
-              type="text"
+              {services.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} (${s.price.toLocaleString("es-MX")} MXN)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="font-bold text-[#2d1822]">Fecha (YYYY-MM-DD):</label>
+              <input
+                type="date"
+                required
+                value={formDate || selectedDate}
+                onChange={(e) => setFormDate(e.target.value)}
+                className="studio-input mt-1 w-full rounded-2xl border border-pink-200 bg-pink-50/40 p-2.5 text-xs text-[#2d1822]"
+              />
+            </div>
+            <div>
+              <label className="font-bold text-[#2d1822]">Hora de Inicio:</label>
+              <input
+                type="text"
+                required
+                value={formTime}
+                onChange={(e) => setFormTime(e.target.value)}
+                placeholder="11:00"
+                className="studio-input mt-1 w-full rounded-2xl border border-pink-200 bg-pink-50/40 p-2.5 text-xs text-[#2d1822]"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="font-bold text-[#2d1822]">Notas &amp; Preferencias:</label>
+            <textarea
               value={formNotes}
               onChange={(e) => setFormNotes(e.target.value)}
-              placeholder="Backdrop preferences, wardrobe notes..."
-              className="mt-1 h-10 w-full rounded-xl border border-white/15 bg-[#0c0e17] px-3 text-xs text-white"
+              placeholder="Fondo rosa pastel, sesión de compromiso..."
+              rows={2}
+              className="mt-1 w-full rounded-2xl border border-pink-200 bg-pink-50/40 p-2.5 text-xs text-[#2d1822]"
             />
           </div>
 
-          {formError && (
-            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-rose-300">
-              {formError}
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="mt-2 flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setIsBookingDialogOpen(false)}
-              className="h-10 rounded-xl border border-white/10 px-4 text-xs text-slate-300 hover:bg-white/5"
+              className="rounded-2xl border border-pink-200 px-3 py-2 text-xs font-semibold text-[#7b5965]"
             >
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
-              className="h-10 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 text-xs font-bold text-slate-950"
+              className="rounded-2xl bg-gradient-to-r from-[#e0446e] to-[#c52752] px-4 py-2 font-bold text-white shadow"
             >
-              Confirm Studio Booking
+              Confirmar Reserva
             </button>
           </div>
         </form>
       </LightDismissDialog>
 
-      {/* DIALOG 4: Reset Studio to Initial State Modal */}
+      {/* --- DIALOG 3: SMS Webhook Simulator --- */}
+      <LightDismissDialog
+        open={isWebhookDialogOpen}
+        onClose={() => setIsWebhookDialogOpen(false)}
+        title="Simulador de Webhook SMS / Twilio"
+        subtitle="Prueba cómo responde el endpoint /api/webhook/sms ante mensajes entrantes en formato TwiML XML o JSON."
+      >
+        <div className="flex flex-col gap-3 text-xs">
+          <p className="text-[#7b5965]">
+            Envía una petición POST simulada con payload de SMS entrante para verificar la generación de respuestas compatibles con Twilio.
+          </p>
+          <button
+            type="button"
+            onClick={handleTestSmsWebhook}
+            disabled={isTestingWebhook}
+            className="rounded-2xl bg-gradient-to-r from-[#e0446e] to-[#c52752] py-2.5 text-center font-bold text-white shadow"
+          >
+            {isTestingWebhook ? "Consultando Agente SMS..." : "Disparar Webhook de Prueba"}
+          </button>
+
+          {webhookTestOutput && (
+            <div className="rounded-2xl border border-pink-200 bg-[#faf3ec] p-3">
+              <span className="font-bold text-[#9e193e]">Respuesta del Servidor (TwiML XML):</span>
+              <pre className="mt-1 max-h-48 overflow-auto font-mono text-[10px] text-[#2d1822]">
+                {webhookTestOutput}
+              </pre>
+            </div>
+          )}
+        </div>
+      </LightDismissDialog>
+
+      {/* --- DIALOG 4: Demo Reset Dialog --- */}
       <LightDismissDialog
         open={isResetDialogOpen}
         onClose={() => setIsResetDialogOpen(false)}
-        title="Reset Everything to Initial State"
-        subtitle="Restore the studio calendar, priority waitlist, and SMS chat coordinator back to factory defaults."
+        title="Reiniciar Demo juntosxsiempre"
+        subtitle="Restaura la agenda, clientes semilla y conversaciones al estado inicial del estudio."
       >
-        <div className="space-y-4 text-xs">
-          <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.08] p-4 text-slate-200">
-            <p className="font-semibold text-amber-300">
-              This action will reset:
-            </p>
-            <ul className="mt-2 space-y-1.5 text-[11px] text-slate-300">
-              <li className="flex items-center gap-2">
-                <span className="text-amber-400">✓</span>
-                <span>
-                  <strong>4 Seed Studio Bookings</strong> (Elena Rostova, Marcus &amp; Priya Vance, Devon Brooks, Solstice Roasters)
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-amber-400">✓</span>
-                <span>
-                  <strong>Priority Waitlist Queue</strong> (Chloe Sterling WTL-8104 reset to waiting)
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-amber-400">✓</span>
-                <span>
-                  <strong>SMS Chat Session</strong> (Conversation history cleared, welcome greeting restored)
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-amber-400">✓</span>
-                <span>
-                  <strong>Client Contact Info</strong> (Phone reset to default (555) 019-2834)
-                </span>
-              </li>
-            </ul>
-          </div>
-
-          <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.02] p-3 text-slate-300 transition hover:bg-white/5">
-            <input
-              type="checkbox"
-              checked={resetClearApiKeys}
-              onChange={(e) => setResetClearApiKeys(e.target.checked)}
-              className="h-4 w-4 rounded accent-amber-500"
-            />
-            <span className="text-xs">
-              Also clear custom runtime API keys &amp; model overrides
-            </span>
-          </label>
-
-          <div className="flex justify-end gap-2 pt-2">
+        <div className="flex flex-col gap-3 text-xs">
+          <p className="text-[#7b5965]">
+            Esto restablecerá las 4 citas iniciales en Roma Norte, la lista de espera con Lucía Benítez y el historial de chat con Camila.
+          </p>
+          <div className="flex justify-end gap-2 mt-2">
             <button
               type="button"
-              disabled={isResetting}
               onClick={() => setIsResetDialogOpen(false)}
-              className="h-10 rounded-xl border border-white/10 px-4 text-xs text-slate-300 hover:bg-white/5 disabled:opacity-50"
+              className="rounded-2xl border border-pink-200 px-3 py-2 font-semibold text-[#7b5965]"
             >
-              Cancel
+              Cancelar
             </button>
             <button
               type="button"
+              onClick={handleFullReset}
               disabled={isResetting}
-              onClick={() => handleFullReset({ clearApiKeys: resetClearApiKeys })}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 disabled:opacity-50"
+              className="rounded-2xl bg-gradient-to-r from-[#e0446e] to-[#c52752] px-4 py-2 font-bold text-white shadow"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${isResetting ? "animate-spin" : ""}`} />
-              <span>{isResetting ? "Resetting..." : "Reset Everything"}</span>
+              {isResetting ? "Restaurando..." : "Sí, Reiniciar Demo"}
             </button>
           </div>
         </div>

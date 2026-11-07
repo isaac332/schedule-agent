@@ -45,14 +45,16 @@ export function formatTime12h(time24: string): string {
   return `${hour12}:${String(mm).padStart(2, "0")} ${period}`;
 }
 
-export function formatPrettyDate(dateStr: string): string {
+export function formatPrettyDate(dateStr: string, locale: string = "es-MX"): string {
   const d = parseDateString(dateStr);
-  return d.toLocaleDateString("en-US", {
+  const formatted = d.toLocaleDateString(locale, {
     weekday: "short",
-    month: "short",
     day: "numeric",
+    month: "short",
     year: "numeric",
   });
+  // Capitalize first letter (e.g. "sáb, 14 nov 2026" -> "Sáb, 14 nov 2026")
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
 export function getNextOpenStudioDates(fromDateStr: string, count: number): string[] {

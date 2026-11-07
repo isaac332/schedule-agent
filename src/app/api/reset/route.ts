@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       serviceId?: string;
     };
 
-    const serviceId = body.serviceId || "headshot-express";
+    const serviceId = body.serviceId || "pareja-juntos";
     resetDemoStore();
 
     const todayStr = formatLocalDate(new Date());
