@@ -28,13 +28,14 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const dateParam = searchParams.get("date");
   const serviceId = searchParams.get("serviceId") || "pareja-juntos";
+  const daysParam = parseInt(searchParams.get("days") || "35", 10);
 
   const todayStr = formatLocalDate(new Date());
-  const nextOpen = getNextOpenStudioDates(todayStr, 6);
+  const nextOpen = getNextOpenStudioDates(todayStr, 35);
   const targetDate = dateParam || nextOpen[0] || todayStr;
 
   const dayAvailability = computeDayAvailability(targetDate, serviceId);
-  const weekAvailability = computeRangeAvailability(todayStr, 7, serviceId);
+  const monthAvailability = computeRangeAvailability(todayStr, Math.min(daysParam, 45), serviceId);
 
   return Response.json({
     studio: STUDIO_INFO,
@@ -46,7 +47,8 @@ export async function GET(request: Request) {
     appointments: getAllAppointments(),
     waitlist: getAllWaitlistEntries(),
     selectedDateAvailability: dayAvailability,
-    weekAvailability,
+    weekAvailability: monthAvailability.slice(0, 7),
+    monthAvailability,
     nextOpenDates: nextOpen,
   });
 }

@@ -711,7 +711,7 @@ async function runSmartLocalDemoCoordinator(
 
 export async function processScheduleAgentTurn(params: {
   userMessage: string;
-  history: StandardMessage[];
+  history?: StandardMessage[];
   clientPhone: string;
   providerConfig?: RuntimeProviderConfig;
   scenarioContext?: ScenarioConfig;
@@ -722,6 +722,7 @@ export async function processScheduleAgentTurn(params: {
   telemetry: ProviderTelemetry;
 }> {
   const startTime = Date.now();
+  const safeHistory = params.history || [];
   const setup = resolveProviderSetup(params.providerConfig);
   const canUseLiveLLM = setup.provider.validateConfig();
 
@@ -754,7 +755,7 @@ REGLA PRIORITARIA: Usa estos números y detalles exactos al cotizar o responder 
         systemPrompt,
       );
       agent.setToolsEnabled(true);
-      agent.loadHistory(params.history);
+      agent.loadHistory(safeHistory);
 
       const reply = await agent.sendMessage(params.userMessage, {
         reasoning: { effort: "low" },
@@ -811,13 +812,13 @@ REGLA PRIORITARIA: Usa estos números y detalles exactos al cotizar o responder 
 
       const demoResult = await runSmartLocalDemoCoordinator(
         params.userMessage,
-        params.history,
+        safeHistory,
         params.clientPhone,
         params.scenarioContext,
       );
 
       const nextHistory: StandardMessage[] = [
-        ...params.history,
+        ...safeHistory,
         { role: "user", content: params.userMessage },
         { role: "model", content: demoResult.reply },
       ];
@@ -844,13 +845,13 @@ REGLA PRIORITARIA: Usa estos números y detalles exactos al cotizar o responder 
   // Sin llaves de API configuradas: usa el Coordinador Inteligente Local Determinístico
   const demoResult = await runSmartLocalDemoCoordinator(
     params.userMessage,
-    params.history,
+    safeHistory,
     params.clientPhone,
     params.scenarioContext,
   );
 
   const nextHistory: StandardMessage[] = [
-    ...params.history,
+    ...safeHistory,
     { role: "user", content: params.userMessage },
     { role: "model", content: demoResult.reply },
   ];

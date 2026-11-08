@@ -92,7 +92,7 @@ export function computeRangeAvailability(
   daysCount: number = 5,
   serviceQueryOrId: string = "pareja-juntos",
 ): DayAvailability[] {
-  const safeDays = Math.min(Math.max(daysCount, 1), 14);
+  const safeDays = Math.min(Math.max(daysCount, 1), 60);
   const results: DayAvailability[] = [];
 
   for (let i = 0; i < safeDays; i++) {

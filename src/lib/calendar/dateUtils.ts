@@ -61,7 +61,7 @@ export function getNextOpenStudioDates(fromDateStr: string, count: number): stri
   const dates: string[] = [];
   let cursor = fromDateStr;
   let safety = 0;
-  while (dates.length < count && safety < 30) {
+  while (dates.length < count && safety < 120) {
     const sched = getDayScheduleForDate(cursor);
     if (sched.isOpen) {
       dates.push(cursor);
@@ -70,6 +70,77 @@ export function getNextOpenStudioDates(fromDateStr: string, count: number): stri
     safety++;
   }
   return dates;
+}
+
+export interface CalendarDayCell {
+  dateStr: string;
+  dayNumber: number;
+  month: number;
+  year: number;
+  isCurrentMonth: boolean;
+  dayOfWeek: number; // 0 = Dom, 1 = Lun, etc.
+}
+
+export function formatMonthYear(year: number, monthIndex: number, locale: string = "es-MX"): string {
+  const d = new Date(year, monthIndex, 1);
+  const formatted = d.toLocaleDateString(locale, { month: "long", year: "numeric" });
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+}
+
+export function getCalendarGridForMonth(year: number, monthIndex: number): CalendarDayCell[] {
+  const firstDayOfMonth = new Date(year, monthIndex, 1);
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const startDayOfWeek = firstDayOfMonth.getDay(); // 0 = Domingo
+
+  const days: CalendarDayCell[] = [];
+
+  // Previous month trailing days
+  const prevMonthLastDate = new Date(year, monthIndex, 0).getDate();
+  for (let i = startDayOfWeek - 1; i >= 0; i--) {
+    const dayNum = prevMonthLastDate - i;
+    const prevMonthIdx = monthIndex === 0 ? 11 : monthIndex - 1;
+    const prevYear = monthIndex === 0 ? year - 1 : year;
+    const dStr = `${prevYear}-${String(prevMonthIdx + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+    days.push({
+      dateStr: dStr,
+      dayNumber: dayNum,
+      month: prevMonthIdx,
+      year: prevYear,
+      isCurrentMonth: false,
+      dayOfWeek: new Date(prevYear, prevMonthIdx, dayNum).getDay(),
+    });
+  }
+
+  // Current month days
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dStr = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    days.push({
+      dateStr: dStr,
+      dayNumber: d,
+      month: monthIndex,
+      year,
+      isCurrentMonth: true,
+      dayOfWeek: new Date(year, monthIndex, d).getDay(),
+    });
+  }
+
+  // Next month leading days to complete the full weeks (multiple of 7)
+  const remaining = (7 - (days.length % 7)) % 7;
+  for (let i = 1; i <= remaining; i++) {
+    const nextMonthIdx = monthIndex === 11 ? 0 : monthIndex + 1;
+    const nextYear = monthIndex === 11 ? year + 1 : year;
+    const dStr = `${nextYear}-${String(nextMonthIdx + 1).padStart(2, "0")}-${String(i).padStart(2, "0")}`;
+    days.push({
+      dateStr: dStr,
+      dayNumber: i,
+      month: nextMonthIdx,
+      year: nextYear,
+      isCurrentMonth: false,
+      dayOfWeek: new Date(nextYear, nextMonthIdx, i).getDay(),
+    });
+  }
+
+  return days;
 }
 
 /**

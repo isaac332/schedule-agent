@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   ArrowRight,
   BellRing,
@@ -87,6 +88,9 @@ interface ActiveSimulationInfo {
 }
 
 export function ScheduleAgentWorkspace() {
+  // Hide ROI, simulations, and fluff while preserving all underlying code
+  const HIDE_FLUFF_AND_SIMULATIONS = true;
+
   const [services, setServices] = useState<StudioService[]>([]);
   const [addOns, setAddOns] = useState<StudioAddOn[]>([]);
   const [photographers, setPhotographers] = useState<StudioPhotographer[]>([]);
@@ -135,7 +139,7 @@ export function ScheduleAgentWorkspace() {
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isOwnerPitchOpen, setIsOwnerPitchOpen] = useState(false);
-  const [isOwnerPitchMode, setIsOwnerPitchMode] = useState(true);
+  const [isOwnerPitchMode, setIsOwnerPitchMode] = useState(false);
   const [activeSimulation, setActiveSimulation] = useState<ActiveSimulationInfo | null>(null);
 
   // Proposal 1: Scenario Builder State & Live Results
@@ -981,6 +985,16 @@ export function ScheduleAgentWorkspace() {
 
           {/* Action Pills */}
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* Link to Focused Chat Agent */}
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 rounded-xl border border-pink-300 bg-pink-100/90 px-2.5 py-1 text-xs font-black text-[#c52752] shadow-2xs hover:bg-pink-200 active:scale-95 transition"
+              title="Ir a la página enfocada en el Agente de Chat"
+            >
+              <Bot className="h-3.5 w-3.5 text-[#e0446e]" />
+              <span>Agente Chat</span>
+            </Link>
+
             {/* Guided Tour Pill */}
             <button
               type="button"
@@ -1044,7 +1058,7 @@ export function ScheduleAgentWorkspace() {
       </header>
 
       {/* --- Owner Presentation HUD & 5-Pillar Guided Tour (Selling to Studio Owner) --- */}
-      {isOwnerPitchMode ? (
+      {!HIDE_FLUFF_AND_SIMULATIONS && (isOwnerPitchMode ? (
         <div className="border-b border-pink-200/80 bg-gradient-to-r from-[#faebef] via-[#fffdfb] to-[#fdf2f4] px-3 py-1.5 shadow-2xs">
           <div className="mx-auto w-full max-w-md min-w-0">
             <div className="flex items-center justify-between gap-1.5 mb-1">
@@ -1173,7 +1187,7 @@ export function ScheduleAgentWorkspace() {
             <span>Tour Guiado</span>
           </button>
         </div>
-      )}
+      ))}
 
       {/* --- Parallax Hero Studio Stage (parallax-scroll-effects) --- */}
       <section
@@ -1243,20 +1257,22 @@ export function ScheduleAgentWorkspace() {
           </div>
 
           {/* Studio Advantages Quick Pitch Banner */}
-          <div className="mt-3 border-t border-pink-100/80 pt-2.5 flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[#c52752] flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-[#e0446e]" />
-              <span>Propuesta de Negocio &amp; ROI</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsOwnerPitchOpen(true)}
-              className="inline-flex items-center gap-1 rounded-xl bg-pink-100/90 px-2.5 py-1 text-[11px] font-extrabold text-[#c52752] hover:bg-pink-200 active:scale-95 transition"
-            >
-              <span>Ver Ventajas</span>
-              <ArrowRight className="h-3 w-3" />
-            </button>
-          </div>
+          {!HIDE_FLUFF_AND_SIMULATIONS && (
+            <div className="mt-3 border-t border-pink-100/80 pt-2.5 flex items-center justify-between">
+              <span className="text-[11px] font-bold text-[#c52752] flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-[#e0446e]" />
+                <span>Propuesta de Negocio &amp; ROI</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsOwnerPitchOpen(true)}
+                className="inline-flex items-center gap-1 rounded-xl bg-pink-100/90 px-2.5 py-1 text-[11px] font-extrabold text-[#c52752] hover:bg-pink-200 active:scale-95 transition"
+              >
+                <span>Ver Ventajas</span>
+                <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -1265,7 +1281,7 @@ export function ScheduleAgentWorkspace() {
         {/* =========================================================================
             PROPOSAL 1: RESULTADOS DE TU ESCENARIO EN VIVO BADGE
             ========================================================================= */}
-        {activeScenarioResult && (
+        {activeScenarioResult && !HIDE_FLUFF_AND_SIMULATIONS && (
           <div className="mb-3 rounded-2xl border-2 border-[#e0446e]/80 bg-gradient-to-br from-pink-50/95 via-[#fffdfb] to-amber-50/90 p-3.5 shadow-md animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -1382,7 +1398,7 @@ export function ScheduleAgentWorkspace() {
         )}
 
         {/* Active Simulation Live Explanation Banner */}
-        {activeSimulation && (
+        {activeSimulation && !HIDE_FLUFF_AND_SIMULATIONS && (
           <div className="mb-3 rounded-2xl border border-pink-300 bg-gradient-to-br from-pink-50/95 via-[#fffdfb] to-amber-50/80 p-3 shadow-md animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -2429,7 +2445,7 @@ export function ScheduleAgentWorkspace() {
         )}
 
         {/* TAB 5: STUDIO OWNER ROI & VALUE PITCH */}
-        {mobileTab === "roi" && (
+        {mobileTab === "roi" && !HIDE_FLUFF_AND_SIMULATIONS && (
           <div id="tour-step-roi" className="scroll-mt-24 sm:scroll-mt-28">
             <OwnerPitchSection
               onRunUpsellDemo={handleRunUpsellSimulation}
@@ -2528,35 +2544,37 @@ export function ScheduleAgentWorkspace() {
           </button>
 
           {/* Tab 5: Owner Pitch & ROI */}
-          <button
-            type="button"
-            onClick={() => setMobileTab("roi")}
-            className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl transition active:scale-95 ${
-              mobileTab === "roi"
-                ? "text-[#e0446e] font-extrabold"
-                : "text-[#7b5965] font-medium hover:text-[#2d1822]"
-            }`}
-          >
-            <div
-              className={`relative flex h-8 w-8 items-center justify-center rounded-xl ${
+          {!HIDE_FLUFF_AND_SIMULATIONS && (
+            <button
+              type="button"
+              onClick={() => setMobileTab("roi")}
+              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl transition active:scale-95 ${
                 mobileTab === "roi"
-                  ? "bg-gradient-to-tr from-amber-100 to-pink-100 shadow-xs text-[#c52752]"
-                  : ""
+                  ? "text-[#e0446e] font-extrabold"
+                  : "text-[#7b5965] font-medium hover:text-[#2d1822]"
               }`}
             >
-              <Sparkles className="h-4 w-4 text-amber-500 fill-amber-400" />
-              <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#e0446e] text-[8px] font-black text-white">
-                ★
-              </span>
-            </div>
-            <span className="text-[10px]">Ventajas</span>
-          </button>
+              <div
+                className={`relative flex h-8 w-8 items-center justify-center rounded-xl ${
+                  mobileTab === "roi"
+                    ? "bg-gradient-to-tr from-amber-100 to-pink-100 shadow-xs text-[#c52752]"
+                    : ""
+                }`}
+              >
+                <Sparkles className="h-4 w-4 text-amber-500 fill-amber-400" />
+                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#e0446e] text-[8px] font-black text-white">
+                  ★
+                </span>
+              </div>
+              <span className="text-[10px]">Ventajas</span>
+            </button>
+          )}
         </div>
       </nav>
 
       {/* --- DIALOG 0: Owner Pitch & Studio Advantages --- */}
       <LightDismissDialog
-        open={isOwnerPitchOpen}
+        open={isOwnerPitchOpen && !HIDE_FLUFF_AND_SIMULATIONS}
         onClose={() => setIsOwnerPitchOpen(false)}
         title="Ventajas para el Dueño & ROI"
         subtitle="Automatizaciones y rentabilidad para juntosxsiempre en Nogales, Sonora."
@@ -2900,7 +2918,7 @@ export function ScheduleAgentWorkspace() {
             ? `scenario-sheet-${scenarioInitialBasePrice}-${scenarioInitialAddOns?.map((a) => `${a.id}:${a.enabled}:${a.price}`).join("-") || "default"}`
             : "scenario-sheet-closed"
         }
-        open={isScenarioSheetOpen}
+        open={isScenarioSheetOpen && !HIDE_FLUFF_AND_SIMULATIONS}
         onClose={() => setIsScenarioSheetOpen(false)}
         onLaunchScenario={handleLaunchScenario}
         initialBasePrice={scenarioInitialBasePrice}
@@ -2913,7 +2931,7 @@ export function ScheduleAgentWorkspace() {
 
       {/* --- Guided Tour Overlay --- */}
       <GuidedTour
-        isOpen={isTourOpen}
+        isOpen={isTourOpen && !HIDE_FLUFF_AND_SIMULATIONS}
         onClose={() => setIsTourOpen(false)}
         currentStepIndex={tourStepIndex}
         onStepChange={(idx) => setTourStepIndex(idx)}
