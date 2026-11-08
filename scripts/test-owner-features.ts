@@ -125,16 +125,52 @@ async function runOwnerFeatureTests() {
   assert.strictEqual(afterBuffer.valid, true, "Debe permitir horario que respeta los 15m de buffer");
   console.log("✓ 5. Disponibilidad válida post-buffer verificada exitosamente");
 
-  // 5. Verificación de cálculo de ROI para el dueño
-  const sessions = 24;
+  // 5. Verificación de cálculo de ROI para el dueño en todas las fronteras
+  const testPresets = [8, 12, 24, 36, 48, 50];
   const upsellRate = 0.58;
   const avgUpsell = 1450;
-  const extraUpsell = Math.round(sessions * upsellRate * avgUpsell);
-  const recoveredSessions = Math.max(1, Math.round(sessions * 0.12 * 0.85));
-  const extraRecovered = recoveredSessions * 2800;
-  const extraMonthly = extraUpsell + extraRecovered;
-  assert.ok(extraMonthly > 25000, "El ingreso extra mensual proyectado debe superar los $25,000 MXN");
-  console.log("✓ 6. Proyección económica de ROI validada: +$" + extraMonthly.toLocaleString("es-MX") + " MXN/mes");
+  const cancelRate = 0.12;
+  const recoveryRate = 0.85;
+
+  for (const s of testPresets) {
+    const extraUpsell = Math.round(s * upsellRate * avgUpsell);
+    const recovered = Math.max(1, Math.round(s * cancelRate * recoveryRate));
+    const extraRecovered = recovered * 2800;
+    const hoursSaved = Math.round(s * 2.5);
+    const extraMonthly = extraUpsell + extraRecovered;
+    const extraAnnual = extraMonthly * 12;
+
+    assert.ok(extraMonthly > 0, `Ingreso mensual debe ser positivo para ${s} sesiones`);
+    assert.ok(extraAnnual === extraMonthly * 12, "Impacto anual debe ser exactamente 12 veces mensual");
+    assert.ok(hoursSaved >= 20, "Ahorro de horas debe ser de al menos 20 horas al mes");
+    assert.ok(recovered >= 1, "Debe rescatar al menos 1 cita garantizada al mes");
+  }
+
+  // Verificar caso estándar Nogales (24 citas)
+  const nogalesUpsell = Math.round(24 * upsellRate * avgUpsell);
+  const nogalesRecovered = Math.max(1, Math.round(24 * cancelRate * recoveryRate));
+  const nogalesTotal = nogalesUpsell + nogalesRecovered * 2800;
+  assert.strictEqual(nogalesUpsell, 20184, "Upsell de 24 citas debe ser $20,184 MXN");
+  assert.strictEqual(nogalesRecovered, 2, "Citas rescatadas de 24 citas debe ser 2");
+  assert.strictEqual(nogalesTotal, 25784, "Total de 24 citas debe ser $25,784 MXN/mes");
+  console.log("✓ 6. Proyecciones económicas de ROI validadas en fronteras (8, 12, 24, 36, 48, 50 citas)");
+
+  // 6. Verificación de herramienta de Guía de Vestuario y Blindaje Anti No-Show
+  const prepResult2055 = (await tools.sendPrepGuideAndDepositLink({
+    bookingRef: "JXS-2055",
+  })) as { success: boolean; depositAmount: string; prepChecklist: string[] };
+
+  assert.strictEqual(prepResult2055.success, true, "Debe generar guía con éxito para JXS-2055");
+  assert.strictEqual(prepResult2055.depositAmount, "$500 MXN", "Anticipo de Retrato Ejecutivo JXS-2055 debe ser $500 MXN");
+  assert.ok(prepResult2055.prepChecklist.length >= 3, "Debe incluir al menos 3 recomendaciones de vestuario");
+
+  const prepResult2041 = (await tools.sendPrepGuideAndDepositLink({
+    bookingRef: "JXS-2041",
+  })) as { success: boolean; depositAmount: string; prepChecklist: string[] };
+
+  assert.strictEqual(prepResult2041.success, true, "Debe generar guía con éxito para JXS-2041");
+  assert.strictEqual(prepResult2041.depositAmount, "$800 MXN", "Anticipo de Pareja JXS-2041 debe ser $800 MXN");
+  console.log("✓ 7. Herramienta de Guía de Vestuario y Blindaje Anti No-Show ($500 y $800 anticipos) validada");
 
   console.log("\n=== ¡TODAS LAS PRUEBAS DE VENTAJAS PARA EL DUEÑO PASARON EXITOSAMENTE! ===");
 }

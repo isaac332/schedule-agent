@@ -73,6 +73,15 @@ const PROVIDER_MODE_LABELS: Record<
   },
 };
 
+interface ActiveSimulationInfo {
+  id: "upsell" | "latenight" | "buffer" | "waitlist" | "prepguide" | "webhook";
+  title: string;
+  badge: string;
+  formula: string;
+  explanation: string;
+  impact: string;
+}
+
 export function ScheduleAgentWorkspace() {
   const [services, setServices] = useState<StudioService[]>([]);
   const [addOns, setAddOns] = useState<StudioAddOn[]>([]);
@@ -123,6 +132,7 @@ export function ScheduleAgentWorkspace() {
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isOwnerPitchOpen, setIsOwnerPitchOpen] = useState(false);
   const [isOwnerPitchMode, setIsOwnerPitchMode] = useState(true);
+  const [activeSimulation, setActiveSimulation] = useState<ActiveSimulationInfo | null>(null);
   const [bufferTestResult, setBufferTestResult] = useState<{
     tested: boolean;
     time: string;
@@ -528,6 +538,89 @@ export function ScheduleAgentWorkspace() {
     });
   };
 
+  const handleRunUpsellSimulation = () => {
+    setActiveSimulation({
+      id: "upsell",
+      title: "Simulación 1: Upselling Automático de Add-Ons con IA",
+      badge: "+$2,300 MXN en Carrito",
+      formula: "Ticket Base ($2,800) + HMUA ($1,200) + Reel 4K ($1,100) = $5,100 MXN (+82% incremento)",
+      explanation: "Camila cotiza la sesión de parejas e incorpora los complementos solicitados desglosando los 30 min extra de camerino sin fricción de venta manual.",
+      impact: "Eleva el ticket de $2,800 a $5,100 MXN con +$1,850 MXN de margen de contribución directo.",
+    });
+    sendTextMessage(
+      "Quiero cotizar la Sesión Juntos x Siempre agregando Maquillaje y Peinado Profesional y Video Reel 4K Vertical.",
+    );
+    setMobileTab("chat");
+  };
+
+  const handleRunLateNightSimulation = () => {
+    setActiveSimulation({
+      id: "latenight",
+      title: "Simulación 2: Atención Nocturna 24/7 (11:42 PM)",
+      badge: "< 2s Respuesta Instantánea",
+      formula: "35% demanda nocturna × Respuesta < 2s = +35% Conversión neta",
+      explanation: "La novia consulta para un sábado de atardecer a las 11:42 PM. El agente responde al segundo con la agenda real de Nogales y cuenta de anticipo, evitando fuga a la competencia.",
+      impact: "Convierte el 35% de prospectos nocturnos que antes se perdían por demoras de 8+ horas.",
+    });
+    sendTextMessage(
+      "Hola, buenas noches! Mi prometido y yo queremos una sesión de pareja para este sábado antes del atardecer. ¿Tienen algún espacio libre y cuánto cuesta?",
+    );
+    setMobileTab("chat");
+  };
+
+  const handleRunBufferSimulation = () => {
+    setActiveSimulation({
+      id: "buffer",
+      title: "Simulación 3: Algoritmo de Buffer de 15 Minutos Profoto",
+      badge: "15m Amortiguamiento Activo",
+      formula: "Sesión: 11:00 AM – 12:00 PM → Buffer Protegido: [12:00 PM, 12:15 PM] → 12:05 PM RECHAZADO (409)",
+      explanation: "El sistema bloquea automáticamente 15 minutos exactos tras cada sesión. Si un cliente solicita 12:05 PM, el algoritmo rechaza la colisión y sugiere proactivamente las 12:15 PM.",
+      impact: "Protege lámparas Profoto Pro-11 del calentamiento, da tiempo para ciclorama/té y elimina traslapes en recepción.",
+    });
+    handleTestBufferCollision();
+    setMobileTab("calendar");
+  };
+
+  const handleRunWaitlistSimulation = () => {
+    setActiveSimulation({
+      id: "waitlist",
+      title: "Simulación 4: Auto-Recuperación de Cancelación en Lista de Espera",
+      badge: "100% Ingreso Rescatado ($2,800)",
+      formula: "1 Cita Cancelada ($2,800) → Webhook Reactivo → Match WTL-8104 → 1 Clic Reasignado = $0 Horas Muertas",
+      explanation: "Al cancelarse la cita JXS-2041 (11:00 AM), el sistema busca en la lista de espera reactiva por fecha y servicio, empareja a Lucía Benítez y permite reasignar el horario al instante.",
+      impact: "Recupera hasta el 85% de citas canceladas sin perder ingresos ni dejar tiempos muertos al fotógrafo.",
+    });
+    handleCancelBooking("JXS-2041");
+    setMobileTab("bookings");
+  };
+
+  const handleRunPrepGuideSimulation = () => {
+    setActiveSimulation({
+      id: "prepguide",
+      title: "Simulación 5: Guía de Vestuario & Blindaje Anti No-Show",
+      badge: "< 2% Ausentismo",
+      formula: "Anticipo Obligatorio ($500–$1,000 MXN, ej. $500 para JXS-2055) + Guía de Colorimetría Inmediata = Ausentismo < 2%",
+      explanation: "Envío inmediato de recomendaciones de vestuario para los fondos del estudio en Nogales y link de anticipo transferible, asegurando asistencia y puntualidad.",
+      impact: "Reduce el no-show de la media del sector (18%) a menos del 2% y garantiza clientes preparados.",
+    });
+    sendTextMessage(
+      "¿Me puedes enviar la guía de preparación de vestuario y el enlace de anticipo para la cita JXS-2055?",
+    );
+    setMobileTab("chat");
+  };
+
+  const handleRunWebhookSimulation = () => {
+    setActiveSimulation({
+      id: "webhook",
+      title: "Simulación 6: Simulador de Webhook SMS / Twilio en Vivo",
+      badge: "TwiML XML & 99.9% Uptime",
+      formula: "POST /api/webhook/sms → Telemetría & Orquestación LLM → XML <Response><Message>",
+      explanation: "Procesamiento bidireccional de SMS celulares estándar y WhatsApp Business API sin necesidad de que el cliente instale apps externas.",
+      impact: "Canal omnicanal automatizado con respuesta en < 2s disponible 24/7 sin app adicional.",
+    });
+    setIsWebhookDialogOpen(true);
+  };
+
   const handleReassignWaitlist = async (waitlistRef: string = "WTL-8104") => {
     try {
       const res = await fetch("/api/appointments", {
@@ -678,10 +771,7 @@ export function ScheduleAgentWorkspace() {
       ],
       actionLabel: "💬 Cotizar Sesión + Add-Ons con Camila",
       onAction: () => {
-        setMobileTab("chat");
-        sendTextMessage(
-          "Quiero cotizar la Sesión Juntos x Siempre agregando Maquillaje y Peinado Profesional y Video Reel 4K Vertical.",
-        );
+        handleRunUpsellSimulation();
       },
     },
     {
@@ -699,8 +789,7 @@ export function ScheduleAgentWorkspace() {
       ],
       actionLabel: "⚡ Probar Buffer Profoto (12:05 PM)",
       onAction: () => {
-        setMobileTab("calendar");
-        handleTestBufferCollision();
+        handleRunBufferSimulation();
       },
     },
     {
@@ -718,8 +807,7 @@ export function ScheduleAgentWorkspace() {
       ],
       actionLabel: "🔄 Probar Auto-Rescate de Cancelación (JXS-2041)",
       onAction: () => {
-        setMobileTab("bookings");
-        handleCancelBooking("JXS-2041");
+        handleRunWaitlistSimulation();
       },
     },
     {
@@ -892,27 +980,17 @@ export function ScheduleAgentWorkspace() {
             <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
               <button
                 type="button"
-                onClick={() => {
-                  setMobileTab("chat");
-                  sendTextMessage(
-                    "Quiero cotizar la Sesión Juntos x Siempre agregando Maquillaje y Peinado Profesional y Video Reel 4K Vertical.",
-                  );
-                }}
+                onClick={handleRunUpsellSimulation}
                 className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-pink-200 bg-white/95 px-2 py-1 text-[9px] font-bold text-[#c52752] shadow-2xs hover:bg-pink-50 active:scale-95 transition"
                 title="1. Ver upselling automático de alto margen"
               >
                 <span>💎</span>
-                <span>+42% Upsell</span>
+                <span>+Upsell IA</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => {
-                  setMobileTab("chat");
-                  sendTextMessage(
-                    "Hola, buenas noches! Mi prometido y yo queremos una sesión de pareja para este sábado antes del atardecer. ¿Tienen algún espacio libre y cuánto cuesta?",
-                  );
-                }}
+                onClick={handleRunLateNightSimulation}
                 className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-pink-200 bg-white/95 px-2 py-1 text-[9px] font-bold text-[#5e3347] shadow-2xs hover:bg-pink-50 active:scale-95 transition"
                 title="2. Simular cliente a las 11:42 PM"
               >
@@ -922,10 +1000,7 @@ export function ScheduleAgentWorkspace() {
 
               <button
                 type="button"
-                onClick={() => {
-                  setMobileTab("calendar");
-                  handleTestBufferCollision();
-                }}
+                onClick={handleRunBufferSimulation}
                 className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-pink-200 bg-white/95 px-2 py-1 text-[9px] font-bold text-[#5e3347] shadow-2xs hover:bg-pink-50 active:scale-95 transition"
                 title="3. Ver algoritmo de buffer de 15m Profoto"
               >
@@ -935,10 +1010,7 @@ export function ScheduleAgentWorkspace() {
 
               <button
                 type="button"
-                onClick={() => {
-                  handleCancelBooking("JXS-2041");
-                  setMobileTab("bookings");
-                }}
+                onClick={handleRunWaitlistSimulation}
                 className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-pink-200 bg-white/95 px-2 py-1 text-[9px] font-bold text-[#5e3347] shadow-2xs hover:bg-pink-50 active:scale-95 transition"
                 title="4. Ver rescate de cita cancelada"
               >
@@ -948,11 +1020,21 @@ export function ScheduleAgentWorkspace() {
 
               <button
                 type="button"
+                onClick={handleRunPrepGuideSimulation}
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-pink-200 bg-white/95 px-2 py-1 text-[9px] font-bold text-[#5e3347] shadow-2xs hover:bg-pink-50 active:scale-95 transition"
+                title="5. Simular Guía de Vestuario y Blindaje Anti No-Show"
+              >
+                <span>👗</span>
+                <span>Anti No-Show</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => {
                   setMobileTab("roi");
                 }}
                 className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50/95 px-2 py-1 text-[9px] font-extrabold text-emerald-800 shadow-2xs hover:bg-emerald-100 active:scale-95 transition"
-                title="5. Proyección económica y ROI"
+                title="6. Proyección económica y ROI"
               >
                 <span>📊</span>
                 <span>Calc. ROI</span>
@@ -1070,6 +1152,60 @@ export function ScheduleAgentWorkspace() {
 
       {/* --- Main Mobile Viewports (Switched via Bottom Nav) --- */}
       <main className="mx-auto max-w-md px-3 pt-2 pb-12">
+        {/* Active Simulation Live Explanation Banner */}
+        {activeSimulation && (
+          <div className="mb-3 rounded-2xl border border-pink-300 bg-gradient-to-br from-pink-50/95 via-[#fffdfb] to-amber-50/80 p-3 shadow-md animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="flex h-2 w-2 rounded-full bg-[#e0446e] animate-ping" />
+                <span className="rounded-full bg-pink-100 px-2 py-0.5 font-bold text-[9px] uppercase tracking-wider text-[#c52752]">
+                  Simulación Activa
+                </span>
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-[9px] text-emerald-800">
+                  {activeSimulation.badge}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSimulation(null)}
+                className="rounded-lg p-1 text-[#7b5965] hover:bg-pink-100/70 hover:text-[#2d1822] text-[10px] font-bold"
+                aria-label="Cerrar explicación de la simulación"
+              >
+                ✕ Cerrar
+              </button>
+            </div>
+            <h4 className="mt-1 font-extrabold text-xs text-[#2d1822]">
+              {activeSimulation.title}
+            </h4>
+            <p className="mt-0.5 text-[11px] text-[#5e3347] leading-relaxed">
+              {activeSimulation.explanation}
+            </p>
+            <div className="mt-2 rounded-xl border border-pink-200/90 bg-white/90 p-2 font-mono text-[10px]">
+              <span className="font-sans font-bold text-[#c52752] block text-[9px] uppercase tracking-wider mb-0.5">
+                📐 Regla Algorítmica / Fórmula Aplicada:
+              </span>
+              <p className="text-[#2d1822] font-semibold break-words">
+                {activeSimulation.formula}
+              </p>
+            </div>
+            <div className="mt-1.5 flex items-center justify-between text-[10px]">
+              <span className="font-semibold text-emerald-800">
+                💰 {activeSimulation.impact}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileTab("roi");
+                  setActiveSimulation(null);
+                }}
+                className="font-bold text-[#c52752] hover:underline"
+              >
+                Ver en Calculadora ROI →
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* TAB 1: SMS / CHAT COORDINATOR (CAMILA) */}
         {mobileTab === "chat" && (
           <div id="tour-step-chat" className="flex flex-col gap-3 scroll-mt-24 sm:scroll-mt-28">
@@ -1140,6 +1276,12 @@ export function ScheduleAgentWorkspace() {
                           t.includes("fotos extra") ||
                           t.includes("complemento") ||
                           t.includes("hmua");
+                        const hasPrepGuide =
+                          t.includes("guía de preparación") ||
+                          t.includes("guia de preparación") ||
+                          t.includes("vestuario") ||
+                          t.includes("paleta de color") ||
+                          t.includes("checklist");
                         const hasBooking =
                           t.includes("jxs-") ||
                           t.includes("reservación") ||
@@ -1179,6 +1321,30 @@ export function ScheduleAgentWorkspace() {
                               <p className="mt-1.5 text-[9px] text-[#7b5965]">
                                 ✓ El cliente aceptó los complementos sin que tu fotógrafo tuviera que hacer labor de venta en el set.
                               </p>
+                              <div className="mt-1 rounded-lg bg-pink-50/80 p-1 font-mono text-[8px] text-[#2d1822] border border-pink-100">
+                                <code>Fórmula: $2,800 Base + $1,200 HMUA + $1,100 Reel = $5,100 MXN (+82% en Ticket)</code>
+                              </div>
+                            </div>
+                          );
+                        }
+                        if (hasPrepGuide) {
+                          return (
+                            <div className="mt-2.5 rounded-xl border border-pink-200/90 bg-gradient-to-br from-pink-50/90 via-white to-amber-50/70 p-2.5 text-[10px] text-[#2d1822] shadow-2xs">
+                              <div className="flex items-center justify-between border-b border-pink-100 pb-1.5 font-bold text-[#c52752]">
+                                <span className="flex items-center gap-1">
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-[#e0446e]" />
+                                  <span>Ventaja Dueño: Blindaje Anti No-Show (&lt; 2% Ausentismo)</span>
+                                </span>
+                                <span className="rounded-full bg-emerald-100 px-1.5 py-0.2 text-[9px] font-extrabold text-emerald-800">
+                                  Anticipo + Guía
+                                </span>
+                              </div>
+                              <p className="mt-1 text-[9px] text-[#5e3347]">
+                                ✓ Anticipo transferible asegurado ($500–$1,000 MXN) + Paleta de colorimetría para fondos de Nogales entregada en minutos. Reduce el ausentismo del 18% a menos del 2%.
+                              </p>
+                              <div className="mt-1 rounded-lg bg-pink-50/80 p-1 font-mono text-[8px] text-[#2d1822] border border-pink-100">
+                                <code>Fórmula: Anticipo ($500–$1,000 MXN) + Guía Inmediata = Ausentismo &lt; 2% (9x menos pérdidas)</code>
+                              </div>
                             </div>
                           );
                         }
@@ -1238,6 +1404,9 @@ export function ScheduleAgentWorkspace() {
                               <p className="mt-1 text-[9px] text-[#5e3347]">
                                 ✓ Consulta nocturna respondida al instante. No se pierde el cliente con otros estudios de Nogales.
                               </p>
+                              <div className="mt-1 rounded-lg bg-amber-50/80 p-1 font-mono text-[8px] text-[#2d1822] border border-amber-200/60">
+                                <code>Fórmula: 35% Demanda Nocturna × Respuesta &lt; 2s = Cero Fugas a la Competencia</code>
+                              </div>
                             </div>
                           );
                         }
@@ -1378,7 +1547,7 @@ export function ScheduleAgentWorkspace() {
                       <span className="text-[10px] text-[#7b5965]">¿Qué pasa si intentan agendar a las 12:05 PM?</span>
                       <button
                         type="button"
-                        onClick={handleTestBufferCollision}
+                        onClick={handleRunBufferSimulation}
                         className="rounded-lg bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 hover:bg-amber-200 active:scale-95 transition"
                       >
                         Probar Colisión (12:05)
@@ -1386,13 +1555,29 @@ export function ScheduleAgentWorkspace() {
                     </div>
 
                     {bufferTestResult && (
-                      <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-2 text-[10px] text-amber-950 font-sans">
+                      <div className="mt-2.5 rounded-xl border border-amber-300 bg-amber-50/90 p-2.5 text-[10px] text-amber-950 font-sans shadow-2xs">
                         <div className="flex items-center justify-between font-bold">
-                          <span>{bufferTestResult.message}</span>
-                          <span className="rounded bg-rose-100 text-rose-800 px-1.5 py-0.2 text-[8px]">RECHAZADO</span>
+                          <span className="flex items-center gap-1 text-[#c52752]">
+                            <span>⚠️</span>
+                            <span>{bufferTestResult.message}</span>
+                          </span>
+                          <span className="rounded bg-rose-100 text-rose-800 px-1.5 py-0.5 text-[8px] font-extrabold uppercase">
+                            COLISIÓN 409
+                          </span>
                         </div>
-                        <p className="mt-1 font-semibold text-emerald-800">
-                          ✓ Alternativa sugerida: <strong>{bufferTestResult.suggestedSlot}</strong>
+                        <div className="mt-2 rounded-lg bg-white/90 p-2 font-mono text-[9px] border border-amber-200">
+                          <span className="font-sans font-bold text-amber-900 block uppercase mb-0.5">
+                            📐 Verificación Matemática del Algoritmo:
+                          </span>
+                          <p>1. Cita previa: 11:00 AM – 12:00 PM (Duración: 60m)</p>
+                          <p>2. Intervalo de Buffer Obligatorio: [12:00 PM, 12:15 PM] (15m fijos)</p>
+                          <p>3. Horario Solicitado: 12:05 PM (12:05 PM &lt; 12:15 PM → ❌ Invade Buffer)</p>
+                          <p className="text-emerald-800 font-bold mt-0.5">
+                            4. Solución Proactiva IA: Sugerir {bufferTestResult.suggestedSlot}
+                          </p>
+                        </div>
+                        <p className="mt-1.5 text-[10px] text-amber-900">
+                          ✓ <strong>Beneficio para el estudio:</strong> Sofía Morales nunca tiene que apresurar a la pareja, las lámparas Profoto Pro-11 disipan calor adecuadamente y no hay traslapes incómodos en recepción.
                         </p>
                       </div>
                     )}
@@ -1712,17 +1897,36 @@ export function ScheduleAgentWorkspace() {
                       Demostración de Auto-Recuperación de Cancelaciones
                     </h4>
                     <p className="text-[11px] text-[#7b5965] mt-0.5 leading-relaxed">
-                      Si un cliente cancela, observa cómo la lista de espera de abajo se activa de inmediato en verde (&apos;¡Horario Libre Detectado!&apos;), recuperando $2,800 MXN en un instante.
+                      Prueba cancelar la cita JXS-2041 ($2,800 MXN). Observa cómo el webhook reactivo notifica de inmediato a la lista de espera prioritaria (Lucía Benítez), salvando el 100% de los ingresos.
                     </p>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleCancelBooking("JXS-2041")}
+                  onClick={handleRunWaitlistSimulation}
                   className="shrink-0 rounded-xl bg-gradient-to-r from-[#e0446e] to-[#c52752] px-2.5 py-1.5 text-[10px] font-bold text-white shadow active:scale-95 transition"
                 >
                   Probar Cancelar JXS-2041
                 </button>
+              </div>
+
+              {/* Step-by-Step Simulation Logic */}
+              <div className="mt-2.5 rounded-xl border border-pink-100 bg-[#faf3ec]/60 p-2.5 text-[10px] flex flex-col gap-1">
+                <span className="font-bold text-[#c52752] uppercase tracking-wider text-[9px]">
+                  📐 Lógica Algorítmica del Rescate:
+                </span>
+                <p className="text-[#5e3347]">
+                  <strong>1. Detección:</strong> Cancelación de JXS-2041 libera sábado 11:00 AM (Sesión Pareja).
+                </p>
+                <p className="text-[#5e3347]">
+                  <strong>2. Filtro Waitlist:</strong> Búsqueda automática por coincidencia de fecha (Sábado) y servicio.
+                </p>
+                <p className="text-[#5e3347]">
+                  <strong>3. Notificación SMS:</strong> Lucía Benítez (WTL-8104) pasa a estado <span className="text-emerald-700 font-bold">¡Horario Libre Detectado!</span>
+                </p>
+                <p className="text-[#5e3347]">
+                  <strong>4. Reasignación en 1 Clic:</strong> El botón verde de abajo confirma la cita y preserva $2,800 MXN en caja.
+                </p>
               </div>
             </div>
 
@@ -1999,35 +2203,12 @@ export function ScheduleAgentWorkspace() {
         {mobileTab === "roi" && (
           <div id="tour-step-roi" className="scroll-mt-24 sm:scroll-mt-28">
             <OwnerPitchSection
-              onRunUpsellDemo={() => {
-                sendTextMessage(
-                  "Quiero cotizar la Sesión Juntos x Siempre agregando Maquillaje y Peinado Profesional y Video Reel 4K Vertical.",
-                );
-                setMobileTab("chat");
-              }}
-              onRunBookingDemo={() => {
-                handleTestBufferCollision();
-                setMobileTab("calendar");
-              }}
-              onRunWaitlistRecoveryDemo={() => {
-                handleCancelBooking("JXS-2041");
-                setMobileTab("bookings");
-              }}
-              onRunPrepGuideDemo={() => {
-                sendTextMessage(
-                  "¿Me puedes enviar la guía de preparación de vestuario y el enlace de anticipo para la cita JXS-2055?",
-                );
-                setMobileTab("chat");
-              }}
-              onRunLateNightDemo={() => {
-                sendTextMessage(
-                  "Hola, buenas noches! Mi prometido y yo queremos una sesión de pareja para este sábado antes del atardecer. ¿Tienen algún espacio libre y cuánto cuesta?",
-                );
-                setMobileTab("chat");
-              }}
-              onOpenSmsWebhook={() => {
-                setIsWebhookDialogOpen(true);
-              }}
+              onRunUpsellDemo={handleRunUpsellSimulation}
+              onRunBookingDemo={handleRunBufferSimulation}
+              onRunWaitlistRecoveryDemo={handleRunWaitlistSimulation}
+              onRunPrepGuideDemo={handleRunPrepGuideSimulation}
+              onRunLateNightDemo={handleRunLateNightSimulation}
+              onOpenSmsWebhook={handleRunWebhookSimulation}
             />
           </div>
         )}
@@ -2150,38 +2331,27 @@ export function ScheduleAgentWorkspace() {
         <OwnerPitchSection
           onRunUpsellDemo={() => {
             setIsOwnerPitchOpen(false);
-            sendTextMessage(
-              "Quiero cotizar la Sesión Juntos x Siempre agregando Maquillaje y Peinado Profesional y Video Reel 4K Vertical.",
-            );
-            setMobileTab("chat");
+            handleRunUpsellSimulation();
           }}
           onRunBookingDemo={() => {
             setIsOwnerPitchOpen(false);
-            handleTestBufferCollision();
-            setMobileTab("calendar");
+            handleRunBufferSimulation();
           }}
           onRunWaitlistRecoveryDemo={() => {
             setIsOwnerPitchOpen(false);
-            handleCancelBooking("JXS-2041");
-            setMobileTab("bookings");
+            handleRunWaitlistSimulation();
           }}
           onRunPrepGuideDemo={() => {
             setIsOwnerPitchOpen(false);
-            sendTextMessage(
-              "¿Me puedes enviar la guía de preparación de vestuario y el enlace de anticipo para la cita JXS-2055?",
-            );
-            setMobileTab("chat");
+            handleRunPrepGuideSimulation();
           }}
           onRunLateNightDemo={() => {
             setIsOwnerPitchOpen(false);
-            sendTextMessage(
-              "Hola, buenas noches! Mi prometido y yo queremos una sesión de pareja para este sábado antes del atardecer. ¿Tienen algún espacio libre y cuánto cuesta?",
-            );
-            setMobileTab("chat");
+            handleRunLateNightSimulation();
           }}
           onOpenSmsWebhook={() => {
             setIsOwnerPitchOpen(false);
-            setIsWebhookDialogOpen(true);
+            handleRunWebhookSimulation();
           }}
           onCloseModal={() => setIsOwnerPitchOpen(false)}
         />
@@ -2419,6 +2589,19 @@ export function ScheduleAgentWorkspace() {
           <p className="text-[#7b5965]">
             Envía una petición POST simulada con payload de SMS entrante para verificar la generación de respuestas compatibles con Twilio.
           </p>
+
+          {/* Simulation Architecture & Formula Card */}
+          <div className="rounded-xl border border-pink-200/90 bg-[#faf3ec]/70 p-2.5 text-[10px] flex flex-col gap-1.5">
+            <span className="font-bold text-[#c52752] uppercase tracking-wider text-[9px]">
+              📐 Arquitectura &amp; Fórmula del Webhook:
+            </span>
+            <div className="rounded-lg bg-white/90 p-1.5 font-mono text-[9px] border border-pink-100">
+              <code>POST /api/webhook/sms → Validación E.164 → Inferencia Multi-LLM → TwiML XML &lt;Response&gt;&lt;Message&gt;</code>
+            </div>
+            <p className="text-[#5e3347] leading-relaxed">
+              <strong>Beneficio para el estudio:</strong> Conexión nativa omnicanal (SMS directo y WhatsApp Business API) sin obligar a las parejas de Nogales a descargar aplicaciones adicionales. Tiempo de respuesta garantizado &lt; 2 segundos.
+            </p>
+          </div>
           <button
             type="button"
             onClick={handleTestSmsWebhook}
