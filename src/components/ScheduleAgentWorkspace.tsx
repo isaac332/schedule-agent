@@ -29,10 +29,13 @@ import type {
   Appointment,
   ChatTurnMessage,
   ConversationSession,
+  CustomAddOnConfig,
   DayAvailability,
   MobileTab,
   ProviderMode,
   ProviderTelemetry,
+  ScenarioConfig,
+  ScenarioExecutionResult,
   StudioAddOn,
   StudioPhotographer,
   StudioService,
@@ -41,6 +44,7 @@ import type {
 import { formatPrettyDate, formatTime12h } from "@/lib/calendar/dateUtils";
 import { LightDismissDialog } from "./LightDismissDialog";
 import { OwnerPitchSection } from "./OwnerPitchSection";
+import { ScenarioBuilderSheet } from "./ScenarioBuilderSheet";
 import { GuidedTour, type GuidedTourStep } from "./GuidedTour";
 
 const PROVIDER_MODE_LABELS: Record<
@@ -133,6 +137,12 @@ export function ScheduleAgentWorkspace() {
   const [isOwnerPitchOpen, setIsOwnerPitchOpen] = useState(false);
   const [isOwnerPitchMode, setIsOwnerPitchMode] = useState(true);
   const [activeSimulation, setActiveSimulation] = useState<ActiveSimulationInfo | null>(null);
+
+  // Proposal 1: Scenario Builder State & Live Results
+  const [isScenarioSheetOpen, setIsScenarioSheetOpen] = useState(false);
+  const [activeScenarioResult, setActiveScenarioResult] = useState<ScenarioExecutionResult | null>(null);
+  const [scenarioInitialBasePrice, setScenarioInitialBasePrice] = useState<number>(2800);
+  const [scenarioInitialAddOns, setScenarioInitialAddOns] = useState<CustomAddOnConfig[] | undefined>(undefined);
   const [bufferTestResult, setBufferTestResult] = useState<{
     tested: boolean;
     time: string;
@@ -386,7 +396,7 @@ export function ScheduleAgentWorkspace() {
     };
   }, [isBookingDialogOpen]);
 
-  const sendTextMessage = async (textOverride?: string) => {
+  const sendTextMessage = async (textOverride?: string, scenarioContext?: ScenarioConfig) => {
     const text = (textOverride ?? inputMessage).trim();
     if (!text || isSending) return;
 
@@ -406,6 +416,8 @@ export function ScheduleAgentWorkspace() {
     if (!textOverride) setInputMessage("");
     setIsSending(true);
 
+    const startTime = Date.now();
+
     try {
       const res = await fetch("/api/agent/chat", {
         method: "POST",
@@ -414,6 +426,7 @@ export function ScheduleAgentWorkspace() {
           sessionId: "juntosxsiempre-mobile-session",
           clientPhone,
           message: text,
+          scenarioContext,
           clientAppointments: appointments.length > 0 ? appointments : undefined,
           clientWaitlist: waitlist.length > 0 ? waitlist : undefined,
           clientHistory: llmHistory.length > 0 ? llmHistory : undefined,
@@ -428,6 +441,8 @@ export function ScheduleAgentWorkspace() {
       });
 
       const data = await res.json();
+      const elapsed = Date.now() - startTime;
+
       if (data.message) {
         setMessages((prev) => [...prev, data.message]);
       }
@@ -444,6 +459,68 @@ export function ScheduleAgentWorkspace() {
         setAppointments(data.appointments);
         fetchScheduleData(selectedDate, selectedServiceId);
       }
+
+      // If this was a custom scenario execution, populate activeScenarioResult
+      if (scenarioContext) {
+        const sc = scenarioContext;
+        const activeAddOns = (sc.customAddOns || []).filter((a) => a.enabled);
+        const addOnsTotal = activeAddOns.reduce((s, a) => s + a.price, 0);
+        const baseSessionPrice = sc.customBasePrice || 2800;
+
+        let ticketBefore = baseSessionPrice;
+        let ticketAfter = baseSessionPrice + addOnsTotal;
+        let netProfit = addOnsTotal;
+        let summaryExplanation = "";
+
+        if (sc.aiObjective === "rescue-waitlist" || sc.scenarioId === "cancelacion-rescate") {
+          // A cancelled appointment leaves $0 revenue; auto-rescuing recovers the entire session!
+          ticketBefore = 0;
+          ticketAfter = baseSessionPrice + addOnsTotal;
+          netProfit = ticketAfter;
+          summaryExplanation = `Cita cancelada reasignada automáticamente vía SMS a lista de espera. Se rescataron $${ticketAfter.toLocaleString("es-MX")} MXN de tiempo muerto para ${sc.photographerName}.`;
+        } else if (sc.aiObjective === "protect-buffer" || sc.scenarioId === "buffer-15m") {
+          ticketBefore = baseSessionPrice;
+          ticketAfter = baseSessionPrice + addOnsTotal;
+          netProfit = addOnsTotal > 0 ? addOnsTotal : baseSessionPrice;
+          summaryExplanation = `Solicitud de 12:05 PM reubicada a las 12:15 PM con ${sc.photographerName}. 15 min de enfriamiento Profoto y sanitización protegidos sin perder al cliente.`;
+        } else if (sc.aiObjective === "secure-deposit") {
+          const deposit = Math.round(baseSessionPrice * 0.3);
+          ticketBefore = baseSessionPrice;
+          ticketAfter = baseSessionPrice + addOnsTotal;
+          netProfit = addOnsTotal > 0 ? addOnsTotal : deposit;
+          summaryExplanation = `Anticipo de $${deposit.toLocaleString("es-MX")} MXN (30% transferible) y Guía de Vestuario personalizada para set enviada. Ausentismo reducido al < 2%.`;
+        } else {
+          // Default upsell / maximize-ticket
+          ticketBefore = baseSessionPrice;
+          ticketAfter = baseSessionPrice + addOnsTotal;
+          netProfit = addOnsTotal;
+          summaryExplanation = `Ticket incrementado en +$${addOnsTotal.toLocaleString("es-MX")} MXN mediante recomendación de ${activeAddOns.length} complementos de alto margen.`;
+        }
+
+        const objectiveMap: Record<string, string> = {
+          "maximize-ticket": "Ticket Maximizado con Upsell IA",
+          "protect-buffer": "Buffer de 15m Profoto Blindado",
+          "rescue-waitlist": "Cita Auto-Rescatada vía SMS Waitlist",
+          "secure-deposit": "Anticipo & Blindaje Anti No-Show Asegurado",
+        };
+
+        setActiveScenarioResult({
+          scenarioId: sc.scenarioId,
+          scenarioTitle: sc.scenarioTitle,
+          ticketBefore,
+          ticketAfter,
+          netProfit,
+          latencyMs: data.telemetry?.latencyMs || elapsed,
+          objectiveId: sc.aiObjective,
+          objectiveLabel: objectiveMap[sc.aiObjective] || "Objetivo Cumplido",
+          objectiveAchieved: true,
+          photographerName: sc.photographerName,
+          assignedSet: sc.assignedSet,
+          activeAddOnsCount: activeAddOns.length,
+          timestamp: new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }),
+          summaryExplanation,
+        });
+      }
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
       msgSeqRef.current += 1;
@@ -459,6 +536,17 @@ export function ScheduleAgentWorkspace() {
     } finally {
       setIsSending(false);
     }
+  };
+
+  const handleLaunchScenario = (config: ScenarioConfig) => {
+    setActiveSimulation(null);
+
+    if (config.scenarioId === "buffer-15m") {
+      handleTestBufferCollision();
+    }
+
+    const message = config.customUserMessage || "Cotizar sesión";
+    sendTextMessage(message, config);
   };
 
   const handleFullReset = async () => {
@@ -919,6 +1007,17 @@ export function ScheduleAgentWorkspace() {
               <span>ROI</span>
             </button>
 
+            {/* 3-Step Scenario Wizard Launch Pill (Proposal 1) */}
+            <button
+              type="button"
+              onClick={() => setIsScenarioSheetOpen(true)}
+              className="inline-flex items-center gap-1 rounded-xl border border-pink-300/80 bg-gradient-to-r from-pink-100 via-rose-50 to-pink-50 px-2 py-1 text-xs font-black text-[#c52752] shadow-2xs hover:border-pink-400 active:scale-95 transition"
+              title="Constructor de Escenarios en Vivo (3 Pasos)"
+            >
+              <span>🎯</span>
+              <span className="hidden xs:inline">Escenarios</span>
+            </button>
+
             {/* Quick Provider Pill */}
             <button
               type="button"
@@ -978,6 +1077,17 @@ export function ScheduleAgentWorkspace() {
 
             {/* 5-Pillar Horizontal Carousel (No Horizontal Overflow) */}
             <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
+              {/* Proposal 1: 3-Step Scenario Wizard Carousel Trigger */}
+              <button
+                type="button"
+                onClick={() => setIsScenarioSheetOpen(true)}
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg border-2 border-[#e0446e] bg-gradient-to-r from-[#e0446e] to-[#c52752] px-2.5 py-1 text-[9px] font-black text-white shadow-xs hover:opacity-95 active:scale-95 transition"
+                title="Constructor de Escenarios en Vivo (3 Pasos)"
+              >
+                <span>🎯</span>
+                <span>Constructor 3 Pasos</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleRunUpsellSimulation}
@@ -1152,6 +1262,125 @@ export function ScheduleAgentWorkspace() {
 
       {/* --- Main Mobile Viewports (Switched via Bottom Nav) --- */}
       <main className="mx-auto max-w-md px-3 pt-2 pb-12">
+        {/* =========================================================================
+            PROPOSAL 1: RESULTADOS DE TU ESCENARIO EN VIVO BADGE
+            ========================================================================= */}
+        {activeScenarioResult && (
+          <div className="mb-3 rounded-2xl border-2 border-[#e0446e]/80 bg-gradient-to-br from-pink-50/95 via-[#fffdfb] to-amber-50/90 p-3.5 shadow-md animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
+                <span className="rounded-full bg-pink-100 px-2 py-0.5 font-black text-[9px] uppercase tracking-wider text-[#9e193e]">
+                  Resultados de Tu Escenario
+                </span>
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-[9px] text-emerald-800">
+                  ✅ {activeScenarioResult.objectiveLabel}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveScenarioResult(null)}
+                className="rounded-xl border border-pink-200 bg-white px-2.5 py-1 text-[#7b5965] hover:bg-pink-100/70 hover:text-[#2d1822] text-[10px] font-bold min-h-[44px] min-w-[44px] inline-flex items-center justify-center transition active:scale-95"
+                aria-label="Cerrar resultados del escenario"
+              >
+                ✕ Cerrar
+              </button>
+            </div>
+
+            <h4 className="mt-1.5 font-black text-xs text-[#2d1822]">
+              {activeScenarioResult.scenarioTitle}
+            </h4>
+            <p className="text-[10px] text-[#5e3347] mt-0.5">
+              📸 {activeScenarioResult.photographerName} • {activeScenarioResult.assignedSet}
+            </p>
+
+            {/* Live Metrics 3-Col KPI Grid */}
+            <div className="mt-2.5 grid grid-cols-3 gap-1.5 text-center">
+              {/* 1. Ticket Before vs After */}
+              <div className="rounded-xl bg-white/95 p-2 border border-pink-200/80 shadow-2xs">
+                <span className="text-[8px] sm:text-[9px] font-bold text-[#7b5965] block uppercase tracking-wider">
+                  Ticket Antes ➔ Después
+                </span>
+                <div className="mt-0.5 font-mono">
+                  <span className="text-[10px] text-gray-400 line-through">
+                    ${activeScenarioResult.ticketBefore.toLocaleString("es-MX")}
+                  </span>
+                  <span className="block text-xs font-black text-[#c52752]">
+                    ${activeScenarioResult.ticketAfter.toLocaleString("es-MX")}
+                  </span>
+                </div>
+                <span className="text-[8px] font-bold text-emerald-700">
+                  {activeScenarioResult.ticketBefore === 0
+                    ? "100% rescatado"
+                    : activeScenarioResult.ticketAfter > activeScenarioResult.ticketBefore
+                      ? `+${Math.round(((activeScenarioResult.ticketAfter - activeScenarioResult.ticketBefore) / activeScenarioResult.ticketBefore) * 100)}% extra`
+                      : "Horario blindado"}
+                </span>
+              </div>
+
+              {/* 2. Net Profit Earned */}
+              <div className="rounded-xl bg-white/95 p-2 border border-pink-200/80 shadow-2xs">
+                <span className="text-[8px] sm:text-[9px] font-bold text-[#7b5965] block uppercase tracking-wider">
+                  {activeScenarioResult.objectiveId === "rescue-waitlist"
+                    ? "Ingreso Rescatado"
+                    : "Margen Neto Extra"}
+                </span>
+                <p className="mt-0.5 font-mono text-xs sm:text-sm font-black text-emerald-800">
+                  +${activeScenarioResult.netProfit.toLocaleString("es-MX")} MXN
+                </p>
+                <span className="text-[8px] text-[#7b5965]">
+                  {activeScenarioResult.objectiveId === "rescue-waitlist"
+                    ? "Cita salvada"
+                    : `${activeScenarioResult.activeAddOnsCount} complementos`}
+                </span>
+              </div>
+
+              {/* 3. Real-Time Latency */}
+              <div className="rounded-xl bg-white/95 p-2 border border-pink-200/80 shadow-2xs">
+                <span className="text-[8px] sm:text-[9px] font-bold text-[#7b5965] block uppercase tracking-wider">
+                  Latencia IA
+                </span>
+                <p className="mt-0.5 font-mono text-xs sm:text-sm font-black text-[#c52752]">
+                  {(activeScenarioResult.latencyMs / 1000).toFixed(2)}s
+                </p>
+                <span className="text-[8px] text-[#7b5965]">
+                  Multi-LLM 24/7
+                </span>
+              </div>
+            </div>
+
+            {/* Live Explanation Callout */}
+            {activeScenarioResult.summaryExplanation && (
+              <div className="mt-2.5 rounded-xl border border-emerald-200/90 bg-white/95 p-2 text-[10px] text-emerald-950 flex items-start gap-1.5 leading-relaxed shadow-2xs">
+                <span className="text-emerald-600 font-bold shrink-0">💡</span>
+                <span className="font-medium">{activeScenarioResult.summaryExplanation}</span>
+              </div>
+            )}
+
+            {/* Actions Row */}
+            <div className="mt-2.5 flex items-center justify-between gap-2 pt-1.5 border-t border-pink-200/60 text-[10px]">
+              <button
+                type="button"
+                onClick={() => setIsScenarioSheetOpen(true)}
+                className="font-bold text-[#c52752] hover:underline flex items-center gap-1 min-h-[44px]"
+              >
+                <span>🎯 Ajustar / Otro Escenario →</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileTab("roi");
+                  setActiveScenarioResult(null);
+                }}
+                className="rounded-xl bg-emerald-100 px-3 py-2 font-bold text-emerald-900 hover:bg-emerald-200 transition min-h-[44px] flex items-center"
+              >
+                <span>Ver en Sandbox ROI</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Active Simulation Live Explanation Banner */}
         {activeSimulation && (
           <div className="mb-3 rounded-2xl border border-pink-300 bg-gradient-to-br from-pink-50/95 via-[#fffdfb] to-amber-50/80 p-3 shadow-md animate-in fade-in slide-in-from-top-2 duration-300">
@@ -2209,6 +2438,11 @@ export function ScheduleAgentWorkspace() {
               onRunPrepGuideDemo={handleRunPrepGuideSimulation}
               onRunLateNightDemo={handleRunLateNightSimulation}
               onOpenSmsWebhook={handleRunWebhookSimulation}
+              onOpenScenarioBuilder={(initial) => {
+                if (initial?.basePrice) setScenarioInitialBasePrice(initial.basePrice);
+                if (initial?.addOns) setScenarioInitialAddOns(initial.addOns);
+                setIsScenarioSheetOpen(true);
+              }}
             />
           </div>
         )}
@@ -2352,6 +2586,12 @@ export function ScheduleAgentWorkspace() {
           onOpenSmsWebhook={() => {
             setIsOwnerPitchOpen(false);
             handleRunWebhookSimulation();
+          }}
+          onOpenScenarioBuilder={(initial) => {
+            setIsOwnerPitchOpen(false);
+            if (initial?.basePrice) setScenarioInitialBasePrice(initial.basePrice);
+            if (initial?.addOns) setScenarioInitialAddOns(initial.addOns);
+            setIsScenarioSheetOpen(true);
           }}
           onCloseModal={() => setIsOwnerPitchOpen(false)}
         />
@@ -2652,6 +2892,24 @@ export function ScheduleAgentWorkspace() {
           </div>
         </div>
       </LightDismissDialog>
+
+      {/* --- SCENARIO BUILDER BOTTOM SHEET (PROPOSAL 1) --- */}
+      <ScenarioBuilderSheet
+        key={
+          isScenarioSheetOpen
+            ? `scenario-sheet-${scenarioInitialBasePrice}-${scenarioInitialAddOns?.map((a) => `${a.id}:${a.enabled}:${a.price}`).join("-") || "default"}`
+            : "scenario-sheet-closed"
+        }
+        open={isScenarioSheetOpen}
+        onClose={() => setIsScenarioSheetOpen(false)}
+        onLaunchScenario={handleLaunchScenario}
+        initialBasePrice={scenarioInitialBasePrice}
+        initialAddOns={scenarioInitialAddOns}
+        onOpenRoiSandbox={() => {
+          setIsScenarioSheetOpen(false);
+          setMobileTab("roi");
+        }}
+      />
 
       {/* --- Guided Tour Overlay --- */}
       <GuidedTour

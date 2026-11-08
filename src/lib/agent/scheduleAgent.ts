@@ -21,6 +21,7 @@ import {
 import type {
   ProviderMode,
   ProviderTelemetry,
+  ScenarioConfig,
   ToolExecutionRecord,
 } from "../studio/types";
 import {
@@ -239,11 +240,12 @@ async function runSmartLocalDemoCoordinator(
   userMessage: string,
   history: StandardMessage[],
   clientPhone: string,
+  scenarioContext?: ScenarioConfig,
 ): Promise<{
   reply: string;
   toolExecutions: ToolExecutionRecord[];
 }> {
-  const toolsMap = createStudioToolFunctions(clientPhone);
+  const toolsMap = createStudioToolFunctions(clientPhone, scenarioContext);
   const toolExecutions: ToolExecutionRecord[] = [];
   const lower = userMessage.toLowerCase();
   const todayStr = formatLocalDate(new Date());
@@ -265,6 +267,96 @@ async function runSmartLocalDemoCoordinator(
   };
 
   const refMatch = userMessage.match(/\b(JXS-\d{4}|LUM-\d{4})\b/i);
+
+  // 0. Si se está ejecutando un escenario personalizado desde el Constructor de Escenarios
+  if (scenarioContext) {
+    const sc = scenarioContext;
+    const basePrice = sc.customBasePrice || 2800;
+    const enabledAddOns = (sc.customAddOns || []).filter((a) => a.enabled);
+    const addOnsTotal = enabledAddOns.reduce((sum, a) => sum + a.price, 0);
+    const grandTotal = basePrice + addOnsTotal;
+    const deposit = Math.round(basePrice * 0.3);
+    const balance = grandTotal - deposit;
+    const photogName = sc.photographerName || "Sofía Morales";
+    const assignedSet = sc.assignedSet || "Set A — Galería Nogales & Luz Natural";
+
+    if (sc.scenarioId === "cancelacion-rescate") {
+      const targetRef = refMatch ? refMatch[1].toUpperCase() : "JXS-2041";
+      await callTool("cancelAppointment", {
+        bookingRef: targetRef,
+        reason: "Cancelación de emergencia en el Escenario del Dueño",
+      });
+      return {
+        reply: `¡Hola! He procesado de inmediato la cancelación de la cita **${targetRef}** (Sábado 11:00 AM) para liberar el espacio en el estudio.\n\n🔄 **Auto-Rescate de Horario Activado:**\nIdentifiqué a **Lucía Benítez** (WTL-8104) en la Lista de Espera Reactiva que solicitó exactamente sábado por la mañana. Se le notificó por SMS para confirmar de inmediato.\n\n💰 **Impacto:** Horario salvado ($${basePrice.toLocaleString("es-MX")} MXN recuperados, $0 tiempo muerto para ${photogName}).`,
+        toolExecutions,
+      };
+    }
+
+    if (sc.scenarioId === "buffer-15m") {
+      await callTool("checkAvailableBookings", {
+        date: openDates[0],
+        daysCount: 1,
+        timeOfDay: "afternoon",
+      });
+      return {
+        reply: `¡Hola! Con mucho gusto te atenderíamos, pero a las **12:05 PM** tenemos activo nuestro **Buffer Profoto de 15 Minutos** 🛡️.\n\nEn **juntosxsiempre** reservamos 15 minutos exactos entre sesiones para que las lámparas Profoto Pro-11 enfríen sus condensadores, higienizar el ciclorama y recibirte con café o té sin prisas.\n\n✨ **Horario Seguro Disponible:** Te puedo agendar perfectamente a las **12:15 PM** con **${photogName}** en **${assignedSet}**.\n\n¿Te aparto las 12:15 PM para iniciar puntuales?`,
+        toolExecutions,
+      };
+    }
+
+    if (sc.scenarioId === "pareja-nocturna") {
+      await callTool("calculateSessionQuote", {
+        serviceId: "pareja-juntos",
+        addOns: enabledAddOns.map((a) => a.id).join(","),
+        participants: 2,
+      });
+      await callTool("checkAvailableBookings", {
+        date: openDates[0],
+        daysCount: 2,
+        timeOfDay: "late",
+      });
+      const addOnList = enabledAddOns
+        .map((a) => `• +$${a.price.toLocaleString("es-MX")} MXN — **${a.name}**`)
+        .join("\n");
+
+      return {
+        reply: `¡Hola! 🌙 Qué gusto saludarte a las 11:45 PM. ¡En **juntosxsiempre** estamos listos para atenderte las 24 horas y que no te quedes sin tu fecha!\n\nPara este sábado al atardecer sonorense (4:30 PM) tenemos el horario dorado ideal en **${assignedSet}** con **${photogName}**.\n\n📊 **Cotización a Tu Medida:**\n• **Sesión de Pareja Base**: $${basePrice.toLocaleString("es-MX")} MXN (60 min)\n${addOnList || "• Sin complementos adicionales"}\n\n🌸 **Total Estimado**: **$${grandTotal.toLocaleString("es-MX")} MXN**\n• **Anticipo para congelar horario**: $${deposit.toLocaleString("es-MX")} MXN (100% transferible)\n• **Saldo en el estudio**: $${balance.toLocaleString("es-MX")} MXN\n\n¿Te aparto de una vez las 4:30 PM de este sábado antes de que se ocupe? Solo confírmame los nombres de ambos. 📸`,
+        toolExecutions,
+      };
+    }
+
+    if (sc.scenarioId === "novia-indecisa") {
+      await callTool("calculateSessionQuote", {
+        serviceId: "pareja-juntos",
+        addOns: enabledAddOns.map((a) => a.id).join(","),
+        participants: 2,
+      });
+      const addOnList = enabledAddOns
+        .map((a) => `• **${a.name}** (+$${a.price.toLocaleString("es-MX")} MXN)`)
+        .join("\n");
+
+      return {
+        reply: `¡Felicidades por su compromiso! 💍🌸 Para una sesión previa inolvidable con estilo de portada de revista, **${photogName}** en **${assignedSet}** es la mejor elección en Nogales.\n\n💎 **Paquete Premium Recomendado:**\n• **Sesión Juntos x Siempre**: $${basePrice.toLocaleString("es-MX")} MXN (60 min de shooting)\n${addOnList}\n\n✨ **Ticket Total**: **$${grandTotal.toLocaleString("es-MX")} MXN** (Anticipo de $${deposit.toLocaleString("es-MX")} MXN).\n\nCon el maquillaje en camerino llegas relajada 30 min antes y el Reel 4K te dejará contenido cinematográfico para compartir el mismo día. ¿Les gustaría apartar para el próximo sábado al atardecer?`,
+        toolExecutions,
+      };
+    }
+
+    // Caso personalizado (custom-case)
+    await callTool("calculateSessionQuote", {
+      serviceId: "pareja-juntos",
+      addOns: enabledAddOns.map((a) => a.id).join(","),
+      participants: 2,
+    });
+    const customAddOnText =
+      enabledAddOns.length > 0
+        ? enabledAddOns.map((a) => `• +$${a.price.toLocaleString("es-MX")} MXN — ${a.name}`).join("\n")
+        : "• Complementos: Sin complementos adicionales";
+
+    return {
+      reply: `¡Hola! Con mucho gusto te atiendo en **juntosxsiempre** en Nogales, Sonora.\n\nPara lo que necesitas, te recomiendo a **${photogName}** en **${assignedSet}**.\n\n📋 **Propuesta Personalizada:**\n• **Inversión Base**: $${basePrice.toLocaleString("es-MX")} MXN\n${customAddOnText}\n\n🌸 **Inversión Total**: **$${grandTotal.toLocaleString("es-MX")} MXN** (Anticipo: $${deposit.toLocaleString("es-MX")} MXN 100% transferible).\n\n¿Para qué día de la semana te gustaría que revisemos los horarios disponibles?`,
+      toolExecutions,
+    };
+  }
 
   // 1. Cancelación
   if (lower.includes("cancel") || lower.includes("cancelar") || lower.includes("cancelacion")) {
@@ -622,6 +714,7 @@ export async function processScheduleAgentTurn(params: {
   history: StandardMessage[];
   clientPhone: string;
   providerConfig?: RuntimeProviderConfig;
+  scenarioContext?: ScenarioConfig;
 }): Promise<{
   reply: string;
   updatedHistory: StandardMessage[];
@@ -634,8 +727,24 @@ export async function processScheduleAgentTurn(params: {
 
   if (canUseLiveLLM) {
     try {
-      const toolsMap = createStudioToolFunctions(params.clientPhone);
-      const systemPrompt = buildSystemPrompt(params.clientPhone);
+      const toolsMap = createStudioToolFunctions(params.clientPhone, params.scenarioContext);
+      let systemPrompt = buildSystemPrompt(params.clientPhone);
+
+      if (params.scenarioContext) {
+        const sc = params.scenarioContext;
+        const activeAddonNames = (sc.customAddOns || [])
+          .filter((a) => a.enabled)
+          .map((a) => `${a.name} ($${a.price.toLocaleString("es-MX")} MXN)`)
+          .join(", ");
+
+        systemPrompt += `\n\n🎯 SIMULACIÓN ACTIVA DEL DUEÑO DEL ESTUDIO EN NOGALES:
+El dueño de juntosxsiempre está ejecutando el escenario interactivo "${sc.scenarioTitle}".
+- Precio Base Personalizado por el Dueño: $${sc.customBasePrice.toLocaleString("es-MX")} MXN
+- Complementos Ofrecidos: ${activeAddonNames || "Ninguno"}
+- Fotógrafo y Set Asignado: ${sc.photographerName} (${sc.assignedSet})
+- Objetivo de la IA: ${sc.aiObjective}
+REGLA PRIORITARIA: Usa estos números y detalles exactos al cotizar o responder al cliente en este turno, manteniendo siempre la calidez, profesionalismo y precisión.`;
+      }
 
       const agent = new ChatAgent(
         setup.provider,
@@ -704,6 +813,7 @@ export async function processScheduleAgentTurn(params: {
         params.userMessage,
         params.history,
         params.clientPhone,
+        params.scenarioContext,
       );
 
       const nextHistory: StandardMessage[] = [
@@ -736,6 +846,7 @@ export async function processScheduleAgentTurn(params: {
     params.userMessage,
     params.history,
     params.clientPhone,
+    params.scenarioContext,
   );
 
   const nextHistory: StandardMessage[] = [

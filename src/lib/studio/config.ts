@@ -95,6 +95,13 @@ export const STUDIO_ADDONS: StudioAddOn[] = [
     extraMinutes: 0,
     description: "Vaporizado en estudio de hasta 3 cambios de ropa y asesoría de combinación de texturas con el set.",
   },
+  {
+    id: "cuadro-recuerdo",
+    name: "Cuadro Fine-Art / Impresiones de Recuerdo",
+    price: 750,
+    extraMinutes: 0,
+    description: "Impresión de alta fidelidad en papel algodón Fine-Art montado en cuadro de madera o set de impresiones de recuerdo.",
+  },
 ];
 
 export const STUDIO_SERVICES: StudioService[] = [

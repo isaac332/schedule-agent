@@ -16,6 +16,7 @@ import type {
   Appointment,
   ChatTurnMessage,
   ConversationSession,
+  ScenarioConfig,
   WaitlistEntry,
 } from "@/lib/studio/types";
 
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
       clientPhone?: string;
       message?: string;
       providerConfig?: RuntimeProviderConfig;
+      scenarioContext?: ScenarioConfig;
       resetSession?: boolean;
       clientAppointments?: Appointment[];
       clientWaitlist?: WaitlistEntry[];
@@ -96,6 +98,7 @@ export async function POST(request: Request) {
       history: session.history,
       clientPhone,
       providerConfig: body.providerConfig,
+      scenarioContext: body.scenarioContext,
     });
 
     const assistantTurnMsg: ChatTurnMessage = {

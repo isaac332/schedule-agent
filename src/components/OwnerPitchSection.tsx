@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  Copy,
   Cpu,
   HeartHandshake,
   Info,
@@ -17,6 +18,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
+import type { CustomAddOnConfig } from "@/lib/studio/types";
 
 interface OwnerPitchSectionProps {
   onRunUpsellDemo?: () => void;
@@ -25,6 +27,7 @@ interface OwnerPitchSectionProps {
   onRunPrepGuideDemo?: () => void;
   onRunLateNightDemo?: () => void;
   onOpenSmsWebhook?: () => void;
+  onOpenScenarioBuilder?: (initialValues?: { basePrice?: number; addOns?: CustomAddOnConfig[] }) => void;
   onCloseModal?: () => void;
 }
 
@@ -35,6 +38,7 @@ export function OwnerPitchSection({
   onRunPrepGuideDemo,
   onRunLateNightDemo,
   onOpenSmsWebhook,
+  onOpenScenarioBuilder,
   onCloseModal,
 }: OwnerPitchSectionProps) {
   const [activeTab, setActiveTab] = useState<"roi" | "ventajas" | "demos">("roi");
@@ -42,29 +46,71 @@ export function OwnerPitchSection({
   const [showRoiFormulas, setShowRoiFormulas] = useState<boolean>(true);
 
   // =========================================================================
-  // MATEMÁTICAS & FÓRMULAS DEL RETORNO DE INVERSIÓN (ROI)
-  // Basadas en métricas operativas de estudios boutique en Nogales, Sonora
+  // PROPOSAL 3: CUSTOM FINANCIAL ROI SANDBOX STATE
+  // Permite al dueño calibrar su precio base, complementos y cancelaciones
   // =========================================================================
+  const [customBasePrice, setCustomBasePrice] = useState<number>(2800);
+  const [customAddOns, setCustomAddOns] = useState<CustomAddOnConfig[]>([
+    {
+      id: "maquillaje-peinado",
+      name: "Maquillaje y Peinado Profesional (HMUA)",
+      price: 1200,
+      enabled: true,
+      extraMinutes: 30,
+    },
+    {
+      id: "video-reel",
+      name: "Video Reel 4K Vertical Detrás de Cámaras",
+      price: 1100,
+      enabled: true,
+      extraMinutes: 0,
+    },
+    {
+      id: "fotos-extra-5",
+      name: "5 Fotos Extra con Retoque Fino de Revista",
+      price: 950,
+      enabled: true,
+      extraMinutes: 0,
+    },
+    {
+      id: "cuadro-recuerdo",
+      name: "Cuadro Fine-Art / Impresiones de Recuerdo",
+      price: 750,
+      enabled: false,
+      extraMinutes: 0,
+    },
+    {
+      id: "entrega-express",
+      name: "Entrega Express 24 Horas",
+      price: 850,
+      enabled: false,
+      extraMinutes: 0,
+    },
+  ]);
+  const [cancellationsPerMonth, setCancellationsPerMonth] = useState<number>(3);
+  const [upsellAdoptionRate, setUpsellAdoptionRate] = useState<number>(0.58);
+  const [copiedToast, setCopiedToast] = useState<string>("");
 
   // 1. Venta de Add-ons / Upselling Automático:
-  // Tasa de conversión: 58% de las parejas añaden al menos 1 complemento sugerido por IA.
-  // Valor promedio ponderado: $1,450 MXN (Maquillaje $1,200, Reel 4K $1,100, 5 Fotos Extra $950).
-  const upsellAdoptionRate = 0.58;
-  const averageUpsellValue = 1450;
-  const monthlyUpsellRevenue = Math.round(sessionsPerMonth * upsellAdoptionRate * averageUpsellValue);
+  const activeAddOns = customAddOns.filter((a) => a.enabled);
+  const averageUpsellValue =
+    activeAddOns.length > 0
+      ? Math.round(
+          (activeAddOns.reduce((sum, a) => sum + a.price, 0) / activeAddOns.length) *
+            (activeAddOns.length > 1 ? 1.25 : 1),
+        )
+      : 0;
+  const monthlyUpsellRevenue = Math.round(
+    sessionsPerMonth * upsellAdoptionRate * averageUpsellValue,
+  );
 
   // 2. Auto-recuperación de cancelaciones (Lista de Espera Reactiva):
-  // Cancelación basal mensual del 12%; 85% de los espacios se reasignan inmediatamente vía SMS.
-  // Precio base sesión insignia: $2,800 MXN (Sesión Pareja Juntos x Siempre).
-  const cancellationRate = 0.12;
   const waitlistRecoveryRate = 0.85;
-  const expectedCancellations = sessionsPerMonth * cancellationRate;
-  const recoveredSessionsCount = Math.max(1, Math.round(expectedCancellations * waitlistRecoveryRate));
-  const baseSessionPrice = 2800;
-  const monthlyRecoveredRevenue = recoveredSessionsCount * baseSessionPrice;
+  const recoveredSessionsCount =
+    cancellationsPerMonth > 0 ? Math.max(1, Math.round(cancellationsPerMonth * waitlistRecoveryRate)) : 0;
+  const monthlyRecoveredRevenue = recoveredSessionsCount * customBasePrice;
 
   // 3. Ahorro de tiempo administrativo y atención al cliente:
-  // 2.5 horas ahorradas por cliente (cotizaciones, envío de datos de anticipo, recordatorios, dudas de vestuario).
   const hoursSavedPerSession = 2.5;
   const monthlyHoursSaved = Math.round(sessionsPerMonth * hoursSavedPerSession);
 
@@ -72,9 +118,96 @@ export function OwnerPitchSection({
   const totalExtraMonthlyRevenue = monthlyUpsellRevenue + monthlyRecoveredRevenue;
   const totalExtraAnnualRevenue = totalExtraMonthlyRevenue * 12;
 
+  const averageTicketBefore = customBasePrice;
+  const averageTicketAfter =
+    customBasePrice + Math.round(upsellAdoptionRate * averageUpsellValue);
+  const ticketIncreasePercent =
+    activeAddOns.length > 0 && averageTicketBefore > 0
+      ? Math.round(((averageTicketAfter - averageTicketBefore) / averageTicketBefore) * 100)
+      : 0;
+
   const handleAction = (action?: () => void) => {
     if (onCloseModal) onCloseModal();
     if (action) action();
+  };
+
+  const handleToggleAddOn = (id: string) => {
+    setCustomAddOns((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, enabled: !a.enabled } : a)),
+    );
+  };
+
+  const handleUpdateAddOnPrice = (id: string, newPrice: number) => {
+    const val = Number.isNaN(newPrice) ? 0 : Math.max(0, Math.min(25000, newPrice));
+    setCustomAddOns((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, price: val } : a)),
+    );
+  };
+
+  const handleBlurAddOnPrice = (id: string) => {
+    setCustomAddOns((prev) =>
+      prev.map((a) =>
+        a.id === id ? { ...a, price: Math.max(100, Math.min(25000, a.price || 100)) } : a,
+      ),
+    );
+  };
+
+  const fallbackCopy = (text: string) => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const success = document.execCommand("copy");
+      document.body.removeChild(textArea);
+      if (success) {
+        setCopiedToast("✨ ¡Proyección para tu estudio copiada al portapapeles!");
+        setTimeout(() => setCopiedToast(""), 4000);
+      }
+    } catch {
+      setCopiedToast("📋 Selecciona y copia el resumen del certificado.");
+      setTimeout(() => setCopiedToast(""), 4000);
+    }
+  };
+
+  const handleCopyProjection = () => {
+    const summary = `PROYECCIÓN DE RETORNO DE INVERSIÓN (ROI) • JUNTOSXSIEMPRE
+Estudio Fotográfico en Nogales, Sonora, México
+--------------------------------------------------------
+• Sesiones mensuales: ${sessionsPerMonth} citas/mes
+• Precio base sesión: $${customBasePrice.toLocaleString("es-MX")} MXN
+• Complementos activos (${activeAddOns.length}): ${activeAddOns.map((a) => `${a.name} ($${a.price.toLocaleString("es-MX")} MXN)`).join(", ") || "Ninguno"}
+• Ticket promedio de add-ons: $${averageUpsellValue.toLocaleString("es-MX")} MXN (adopción: ${(upsellAdoptionRate * 100).toFixed(0)}%)
+• Cancelaciones mensuales estimadas: ${cancellationsPerMonth} citas/mes (85% recuperadas: ${recoveredSessionsCount} citas)
+--------------------------------------------------------
+💰 RESULTADOS ECONÓMICOS PROYECTADOS:
+• Ingreso mensual por Upselling IA: +$${monthlyUpsellRevenue.toLocaleString("es-MX")} MXN/mes
+• Ingreso mensual por Citas Rescatadas: +$${monthlyRecoveredRevenue.toLocaleString("es-MX")} MXN/mes
+• GANANCIA NETA EXTRA MENSUAL: +$${totalExtraMonthlyRevenue.toLocaleString("es-MX")} MXN/mes
+• GANANCIA NETA EXTRA ANUAL: +$${totalExtraAnnualRevenue.toLocaleString("es-MX")} MXN/año
+• Tiempo de gestión ahorrado: ${monthlyHoursSaved} horas libres/mes
+--------------------------------------------------------
+Certificado con Inteligencia Artificial Camila • juntosxsiempre Nogales`;
+
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard
+          .writeText(summary)
+          .then(() => {
+            setCopiedToast("✨ ¡Proyección para tu estudio copiada al portapapeles!");
+            setTimeout(() => setCopiedToast(""), 4000);
+          })
+          .catch(() => fallbackCopy(summary));
+      } else {
+        fallbackCopy(summary);
+      }
+    } catch {
+      fallbackCopy(summary);
+    }
   };
 
   const volumePresets = [
@@ -83,6 +216,8 @@ export function OwnerPitchSection({
     { label: "Alta Cap. (36)", value: 36 },
     { label: "Temporada (48)", value: 48 },
   ];
+
+  const basePricePresets = [1800, 2400, 2800, 3200, 4200];
 
   return (
     <div className="flex flex-col gap-3 w-full max-w-full text-xs text-[#2d1822]">
@@ -101,7 +236,7 @@ export function OwnerPitchSection({
           }`}
         >
           <TrendingUp className="h-3.5 w-3.5 text-[#e0446e] shrink-0" />
-          <span className="truncate">ROI</span>
+          <span className="truncate">Sandbox ROI</span>
           <span className="hidden xs:inline text-[11px] font-semibold text-[#a0828c]">&amp; Fórmulas</span>
         </button>
         <button
@@ -126,21 +261,23 @@ export function OwnerPitchSection({
           }`}
         >
           <Zap className="h-3.5 w-3.5 text-[#e0446e] shrink-0" />
-          <span className="truncate">Demos &amp; Simulaciones</span>
+          <span className="truncate">Demos &amp; Simulador</span>
         </button>
       </nav>
 
       {/* =========================================================================
-          TAB 1: ROI & BUSINESS IMPACT WITH TRANSPARENT FORMULAS
+          TAB 1: CUSTOM FINANCIAL ROI SANDBOX (PROPOSAL 3)
           ========================================================================= */}
       {activeTab === "roi" && (
         <div className="flex flex-col gap-3 animate-in fade-in duration-200">
           {/* Quick Highlights 4-KPI Strip with Tooltip Context */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
             <div className="rounded-2xl border border-pink-100 bg-[#faf3ec]/60 p-2.5 shadow-2xs">
-              <span className="block text-base font-extrabold text-[#e0446e]">+30% a +82%</span>
+              <span className="block text-base font-extrabold text-[#e0446e]">+{ticketIncreasePercent}%</span>
               <span className="text-[10px] font-semibold text-[#7b5965]">Ticket Promedio</span>
-              <span className="block text-[8px] text-[#a0828c] mt-0.5 font-mono">+$841 pond. / cita</span>
+              <span className="block text-[8px] text-[#a0828c] mt-0.5 font-mono">
+                +${Math.round(upsellAdoptionRate * averageUpsellValue)} pond./cita
+              </span>
             </div>
             <div className="rounded-2xl border border-pink-100 bg-[#faf3ec]/60 p-2.5 shadow-2xs">
               <span className="block text-base font-extrabold text-[#c52752]">&lt; 2 seg</span>
@@ -159,47 +296,105 @@ export function OwnerPitchSection({
             </div>
           </div>
 
-          {/* Interactive ROI Calculator Card */}
+          {/* Interactive Custom ROI Sandbox Card */}
           <div className="rounded-2xl border border-pink-200/80 bg-[#fffdfb] p-3.5 sm:p-4 shadow-xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <Calculator className="h-4 w-4 text-[#e0446e]" />
                 <h4 className="text-xs font-bold text-[#2d1822] uppercase tracking-wider">
-                  Calculadora de Retorno de Inversión (ROI)
+                  Sandbox Financiero ROI (A Tu Medida)
                 </h4>
               </div>
               <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-extrabold text-emerald-800">
-                Simulación en Vivo
+                Recalculación en Vivo
               </span>
             </div>
 
-            {/* Volume Presets */}
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {volumePresets.map((preset) => (
-                <button
-                  key={preset.value}
-                  type="button"
-                  onClick={() => setSessionsPerMonth(preset.value)}
-                  className={`rounded-xl px-2.5 py-1 text-[10px] font-bold transition active:scale-95 ${
-                    sessionsPerMonth === preset.value
-                      ? "bg-[#e0446e] text-white shadow-2xs"
-                      : "bg-[#faf3ec]/80 border border-pink-200/80 text-[#5e3347] hover:bg-pink-50"
-                  }`}
-                >
-                  {preset.label}
-                </button>
-              ))}
+            {/* Parameter 1: Base Session Price */}
+            <div className="mt-3 rounded-xl bg-[#faf3ec]/50 p-2.5 border border-pink-100">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-[11px] text-[#2d1822]">
+                  1. Precio Base de tu Sesión Insignia:
+                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="text-[10px] font-mono text-[#7b5965]">$</span>
+                  <input
+                    type="number"
+                    step={100}
+                    min={1500}
+                    max={5000}
+                    value={customBasePrice}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      if (!Number.isNaN(val)) setCustomBasePrice(val);
+                    }}
+                    onBlur={() =>
+                      setCustomBasePrice((prev) => Math.max(1500, Math.min(5000, prev || 2800)))
+                    }
+                    className="w-20 rounded-lg bg-pink-100 px-2 py-1 text-center font-mono font-extrabold text-xs text-[#c52752] border border-pink-200 focus:outline-hidden min-h-[40px]"
+                    aria-label="Precio base numérico para ROI"
+                  />
+                  <span className="text-[9px] font-mono text-[#a0828c]">MXN</span>
+                </div>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {basePricePresets.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setCustomBasePrice(preset)}
+                    className={`rounded-xl px-2.5 py-1.5 text-[10px] font-bold transition active:scale-95 min-h-[38px] flex items-center justify-center ${
+                      customBasePrice === preset
+                        ? "bg-[#e0446e] text-white shadow-xs"
+                        : "bg-white border border-pink-200 text-[#5e3347] hover:bg-pink-100"
+                    }`}
+                  >
+                    ${preset.toLocaleString("es-MX")}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="range"
+                min={1500}
+                max={5000}
+                step={100}
+                value={customBasePrice}
+                onChange={(e) => setCustomBasePrice(Number(e.target.value))}
+                className="mt-2.5 w-full accent-[#e0446e] cursor-pointer"
+                aria-label="Precio base de sesión para ROI"
+              />
+              <div className="flex justify-between text-[8px] text-[#a0828c] mt-0.5 font-mono">
+                <span>$1,500 MXN</span>
+                <span>$2,800 Promedio Nogales</span>
+                <span>$5,000 MXN</span>
+              </div>
             </div>
 
-            {/* Slider */}
+            {/* Parameter 2: Monthly Sessions Volume */}
             <div className="mt-2.5 rounded-xl bg-[#faf3ec]/50 p-2.5 border border-pink-100">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-[11px] text-[#2d1822]">
-                  Sesiones al mes en tu estudio:
+                  2. Citas agendadas al mes en tu estudio:
                 </span>
                 <span className="rounded-lg bg-pink-100 px-2 py-0.5 font-mono font-extrabold text-xs text-[#c52752]">
                   {sessionsPerMonth} citas/mes
                 </span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {volumePresets.map((preset) => (
+                  <button
+                    key={preset.value}
+                    type="button"
+                    onClick={() => setSessionsPerMonth(preset.value)}
+                    className={`rounded-xl px-2.5 py-1.5 text-[10px] font-bold transition active:scale-95 min-h-[38px] flex items-center justify-center ${
+                      sessionsPerMonth === preset.value
+                        ? "bg-[#e0446e] text-white shadow-xs"
+                        : "bg-white border border-pink-200 text-[#5e3347] hover:bg-pink-100"
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
               </div>
               <input
                 type="range"
@@ -208,25 +403,131 @@ export function OwnerPitchSection({
                 step={2}
                 value={sessionsPerMonth}
                 onChange={(e) => setSessionsPerMonth(Number(e.target.value))}
-                className="mt-2 w-full accent-[#e0446e] cursor-pointer"
+                className="mt-2.5 w-full accent-[#e0446e] cursor-pointer"
                 aria-label="Sesiones mensuales de fotografía"
               />
-              <div className="flex justify-between text-[9px] text-[#a0828c] mt-1 font-mono">
-                <span>8 mín. (Boutique)</span>
-                <span>24 prom. Nogales</span>
-                <span>50 alta cap.</span>
+            </div>
+
+            {/* Parameter 3: Add-Ons Customization */}
+            <div className="mt-2.5 rounded-xl bg-[#faf3ec]/50 p-2.5 border border-pink-100">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="font-semibold text-[11px] text-[#2d1822]">
+                  3. Selecciona qué Add-Ons ofreces y sus precios:
+                </span>
+                <span className="text-[10px] font-bold text-emerald-800">
+                  {activeAddOns.length} activos
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {customAddOns.map((addon) => (
+                  <div
+                    key={addon.id}
+                    className={`flex items-center justify-between gap-2 rounded-xl p-2 border transition ${
+                      addon.enabled ? "bg-white border-pink-200" : "bg-pink-50/30 border-pink-100 opacity-60"
+                    }`}
+                  >
+                    <label className="flex items-center gap-2 cursor-pointer flex-1 min-w-0 min-h-[44px]">
+                      <input
+                        type="checkbox"
+                        checked={addon.enabled}
+                        onChange={() => handleToggleAddOn(addon.id)}
+                        className="h-4 w-4 rounded accent-[#e0446e] cursor-pointer shrink-0"
+                      />
+                      <span className="text-xs font-semibold text-[#2d1822] truncate">
+                        {addon.name}
+                      </span>
+                    </label>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[10px] text-[#7b5965] font-mono">$</span>
+                      <input
+                        type="number"
+                        step={50}
+                        min={100}
+                        max={10000}
+                        value={addon.price || ""}
+                        disabled={!addon.enabled}
+                        onChange={(e) => handleUpdateAddOnPrice(addon.id, Number(e.target.value))}
+                        onBlur={() => handleBlurAddOnPrice(addon.id)}
+                        className="w-20 rounded-lg border border-pink-200 bg-white px-2 py-1 text-center font-mono font-bold text-xs text-[#c52752] focus:border-[#e0446e] focus:outline-hidden disabled:bg-gray-100 min-h-[44px]"
+                        aria-label={`Precio de ${addon.name}`}
+                      />
+                      <span className="text-[9px] font-mono text-[#a0828c]">MXN</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Parameter 4: Cancellations / Month */}
+            <div className="mt-2.5 rounded-xl bg-[#faf3ec]/50 p-2.5 border border-pink-100">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-[11px] text-[#2d1822]">
+                  4. Cancelaciones imprevistas estimadas al mes:
+                </span>
+                <span className="rounded-lg bg-pink-100 px-2 py-0.5 font-mono font-extrabold text-xs text-[#c52752]">
+                  {cancellationsPerMonth} citas perdidas/mes
+                </span>
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={10}
+                step={1}
+                value={cancellationsPerMonth}
+                onChange={(e) => setCancellationsPerMonth(Number(e.target.value))}
+                className="mt-2 w-full accent-[#e0446e] cursor-pointer"
+                aria-label="Cancelaciones estimadas al mes"
+              />
+              <div className="flex justify-between text-[8px] text-[#a0828c] mt-0.5 font-mono">
+                <span>1 cita</span>
+                <span>{recoveredSessionsCount} citas rescatadas (85% efectividad)</span>
+                <span>10 citas</span>
+              </div>
+            </div>
+
+            {/* Parameter 5: Upsell Adoption Rate */}
+            <div className="mt-2.5 rounded-xl bg-[#faf3ec]/50 p-2.5 border border-pink-100">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-[11px] text-[#2d1822]">
+                  5. Tasa de adopción de complementos con IA:
+                </span>
+                <span className="rounded-lg bg-pink-100 px-2 py-0.5 font-mono font-extrabold text-xs text-[#c52752]">
+                  {(upsellAdoptionRate * 100).toFixed(0)}% de clientes
+                </span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {[
+                  { label: "Conservador (40%)", value: 0.4 },
+                  { label: "Nogales Prom. (58%)", value: 0.58 },
+                  { label: "Agresivo (75%)", value: 0.75 },
+                ].map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setUpsellAdoptionRate(item.value)}
+                    className={`rounded-xl px-2.5 py-1.5 text-[10px] font-bold transition active:scale-95 min-h-[38px] flex items-center justify-center ${
+                      upsellAdoptionRate === item.value
+                        ? "bg-[#e0446e] text-white shadow-xs"
+                        : "bg-white border border-pink-200 text-[#5e3347] hover:bg-pink-100"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </div>
             </div>
 
             {/* Metrics Breakdown Grid */}
-            <div className="mt-2.5 grid grid-cols-2 gap-2 text-center">
+            <div className="mt-3 grid grid-cols-2 gap-2 text-center">
               <div className="rounded-xl border border-pink-100 bg-[#fffdfb] p-2.5">
                 <span className="text-[10px] font-medium text-[#7b5965]">Add-Ons Automáticos</span>
                 <p className="mt-0.5 text-xs sm:text-sm font-extrabold text-[#c52752]">
                   +${monthlyUpsellRevenue.toLocaleString("es-MX")} MXN
                 </p>
                 <span className="text-[9px] text-[#8e7079]">
-                  58% adopción × $1,450 MXN
+                  {(upsellAdoptionRate * 100).toFixed(0)}% adopción × ${averageUpsellValue.toLocaleString("es-MX")}
                 </span>
               </div>
 
@@ -236,7 +537,7 @@ export function OwnerPitchSection({
                   +${monthlyRecoveredRevenue.toLocaleString("es-MX")} MXN
                 </p>
                 <span className="text-[9px] text-[#8e7079]">
-                  {recoveredSessionsCount} citas × $2,800 MXN
+                  {recoveredSessionsCount} citas × ${customBasePrice.toLocaleString("es-MX")}
                 </span>
               </div>
             </div>
@@ -244,7 +545,7 @@ export function OwnerPitchSection({
             {/* Total Grand Output Card */}
             <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-3 text-center">
               <span className="text-[11px] font-bold text-emerald-900 block">
-                Ganancia Neta Extra Estimada para tu Estudio:
+                Ganancia Neta Extra Calculada para Tu Estudio:
               </span>
               <div className="mt-0.5 flex items-baseline justify-center gap-1">
                 <span className="text-xl sm:text-2xl font-black text-emerald-800">
@@ -260,7 +561,105 @@ export function OwnerPitchSection({
           </div>
 
           {/* =========================================================================
-              NEW: DETAILED FORMULAS & CALCULATION BREAKDOWN PANEL
+              PERSONALIZED STUDIO WATERMARK CERTIFICATE CARD (PROPOSAL 3)
+              ========================================================================= */}
+          <div className="relative overflow-hidden rounded-2xl border-2 border-dashed border-[#e0446e]/40 bg-gradient-to-br from-[#fffdfb] via-[#fdf6f0] to-[#faebef] p-3.5 sm:p-4 shadow-sm">
+            {/* Studio Background Watermark Seal */}
+            <div className="pointer-events-none absolute -right-4 -bottom-4 opacity-5 text-[#e0446e] select-none font-serif text-8xl font-black rotate-12" aria-hidden="true">
+              JXS
+            </div>
+
+            <div className="flex items-start justify-between gap-2 border-b border-pink-200/70 pb-2.5">
+              <div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-tr from-[#e0446e] to-[#c52752] text-white text-[9px] font-bold shadow-2xs">
+                    ★
+                  </span>
+                  <span className="font-mono text-[9px] font-extrabold uppercase tracking-widest text-[#9e193e]">
+                    Certificado de Proyección ROI
+                  </span>
+                </div>
+                <h5 className="mt-0.5 text-xs font-black text-[#2d1822]">
+                  Proyección a la medida para tu estudio en Nogales, Sonora
+                </h5>
+                <span className="text-[10px] text-[#7b5965] block">
+                  Av. Álvaro Obregón 354 • juntosxsiempre
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCopyProjection}
+                className="inline-flex items-center gap-1 rounded-xl border border-pink-200 bg-white px-3 py-2 text-[10px] font-bold text-[#c52752] shadow-2xs hover:bg-pink-50 active:scale-95 transition min-h-[44px]"
+                title="Copiar proyección al portapapeles"
+              >
+                <Copy className="h-3.5 w-3.5 text-[#e0446e]" />
+                <span>Copiar</span>
+              </button>
+            </div>
+
+            {/* Watermark Parameters Badge Grid */}
+            <div className="mt-2.5 grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-center text-[10px]">
+              <div className="rounded-xl bg-white/90 p-2 border border-pink-100 shadow-2xs">
+                <span className="text-[#7b5965] block text-[9px]">Base por Cita</span>
+                <span className="font-extrabold text-[#c52752] font-mono">${customBasePrice.toLocaleString("es-MX")}</span>
+              </div>
+              <div className="rounded-xl bg-white/90 p-2 border border-pink-100 shadow-2xs">
+                <span className="text-[#7b5965] block text-[9px]">Citas / Mes</span>
+                <span className="font-extrabold text-[#2d1822] font-mono">{sessionsPerMonth} citas</span>
+              </div>
+              <div className="rounded-xl bg-white/90 p-2 border border-pink-100 shadow-2xs">
+                <span className="text-[#7b5965] block text-[9px]">Add-Ons Activos</span>
+                <span className="font-extrabold text-[#2d1822] font-mono">{activeAddOns.length} selecc.</span>
+              </div>
+              <div className="rounded-xl bg-white/90 p-2 border border-pink-100 shadow-2xs">
+                <span className="text-[#7b5965] block text-[9px]">Citas Salvadas</span>
+                <span className="font-extrabold text-emerald-700 font-mono">{recoveredSessionsCount} citas/mes</span>
+              </div>
+            </div>
+
+            {/* Big Impact Highlight */}
+            <div className="mt-2.5 rounded-xl bg-gradient-to-r from-emerald-100/90 to-teal-50/90 border border-emerald-300/80 p-2.5 text-center">
+              <span className="text-[10px] font-bold text-emerald-950 uppercase tracking-wider block">
+                Retorno Anual Neto Garantizado:
+              </span>
+              <div className="text-xl sm:text-2xl font-black text-emerald-900 mt-0.5 font-mono">
+                +${totalExtraAnnualRevenue.toLocaleString("es-MX")} MXN / año
+              </div>
+              <p className="mt-0.5 text-[10px] text-emerald-800">
+                (+$${totalExtraMonthlyRevenue.toLocaleString("es-MX")} MXN/mes netos adicionales + {monthlyHoursSaved}h libres)
+              </p>
+            </div>
+
+            {/* Actions: Connect Sandbox to Scenario Builder */}
+            <div className="mt-3 flex gap-2 flex-wrap">
+              {onOpenScenarioBuilder && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onCloseModal) onCloseModal();
+                    onOpenScenarioBuilder({
+                      basePrice: customBasePrice,
+                      addOns: customAddOns,
+                    });
+                  }}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#e0446e] to-[#c52752] py-2.5 px-3 text-xs font-black text-white shadow-xs active:scale-95 transition min-h-[44px]"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>🎯 Probar estos números en Escenario en Vivo</span>
+                </button>
+              )}
+            </div>
+
+            {copiedToast && (
+              <div className="mt-2 rounded-lg bg-emerald-700 text-white text-[10px] font-bold px-2.5 py-1 text-center animate-in fade-in duration-200">
+                {copiedToast}
+              </div>
+            )}
+          </div>
+
+          {/* =========================================================================
+              FORMULAS & CALCULATION BREAKDOWN PANEL
               ========================================================================= */}
           <div className="rounded-2xl border border-pink-200 bg-[#faf3ec]/40 p-3 shadow-2xs">
             <button
@@ -271,11 +670,11 @@ export function OwnerPitchSection({
               <div className="flex items-center gap-1.5">
                 <Info className="h-4 w-4 text-[#e0446e] shrink-0" />
                 <span className="text-xs font-bold text-[#2d1822]">
-                  Explicación &amp; Fórmulas Matemáticas de Cálculo
+                  Fórmulas Matemáticas con Tus Números Actuales
                 </span>
               </div>
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#c52752]">
-                {showRoiFormulas ? "Ocultar detalles" : "Ver fórmulas paso a paso"}
+                {showRoiFormulas ? "Ocultar fórmulas" : "Ver fórmulas paso a paso"}
                 {showRoiFormulas ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
               </span>
             </button>
@@ -295,18 +694,13 @@ export function OwnerPitchSection({
                   </div>
                   <div className="mt-1.5 rounded-lg bg-pink-50/70 p-2 font-mono text-[10px] text-[#2d1822] border border-pink-100">
                     <span className="font-sans font-bold text-[#7b5965] block text-[9px] uppercase tracking-wider mb-0.5">
-                      Fórmula Matemática:
+                      Fórmula con tus datos:
                     </span>
-                    <code>Ingreso_Upsell = Sesiones × Tasa_Adopción (58%) × Ticket_Addon ($1,450 MXN)</code>
+                    <code>Ingreso = {sessionsPerMonth} citas × {(upsellAdoptionRate * 100).toFixed(0)}% adopción × ${averageUpsellValue.toLocaleString("es-MX")} MXN ticket addon</code>
                     <div className="mt-1 text-[#c52752] font-semibold">
-                      = {sessionsPerMonth} × 0.58 × $1,450 = <strong>${monthlyUpsellRevenue.toLocaleString("es-MX")} MXN</strong>
+                      = <strong>${monthlyUpsellRevenue.toLocaleString("es-MX")} MXN al mes</strong>
                     </div>
                   </div>
-                  <p className="mt-1.5 text-[10px] text-[#7b5965] leading-relaxed">
-                    <strong>¿Por qué $1,450 MXN?</strong> Promedio ponderado de los 3 complementos más pedidos en el estudio de Nogales: Maquillaje y Peinado Profesional ($1,200 MXN), Video Reel 4K Vertical ($1,100 MXN) y 5 Fotos Extra Retocadas ($950 MXN).
-                    <br />
-                    <strong>¿Por qué 58%?</strong> Es la tasa de aceptación observada cuando Camila sugiere complementos en el momento óptimo de cotización, sin presión invasiva del fotógrafo.
-                  </p>
                 </div>
 
                 {/* Formula 2: Waitlist Recovery */}
@@ -322,18 +716,15 @@ export function OwnerPitchSection({
                   </div>
                   <div className="mt-1.5 rounded-lg bg-emerald-50/70 p-2 font-mono text-[10px] text-[#2d1822] border border-emerald-100">
                     <span className="font-sans font-bold text-[#7b5965] block text-[9px] uppercase tracking-wider mb-0.5">
-                      Fórmula Matemática:
+                      Fórmula con tus datos:
                     </span>
-                    <code>Citas_Salvadas = max(1, round(Sesiones × Cancelaciones [12%] × Reasignación [85%]))</code>
+                    <code>Citas_Salvadas = {cancellationsPerMonth} cancelaciones × 85% rescate = {recoveredSessionsCount} citas</code>
                     <br />
-                    <code>Ingreso_Salvado = Citas_Salvadas × Precio_Base ($2,800 MXN)</code>
+                    <code>Ingreso = {recoveredSessionsCount} citas × ${customBasePrice.toLocaleString("es-MX")} MXN precio base</code>
                     <div className="mt-1 text-emerald-900 font-semibold">
-                      = {sessionsPerMonth} × 0.12 × 0.85 = {(sessionsPerMonth * cancellationRate * waitlistRecoveryRate).toFixed(2)} ≈ {recoveredSessionsCount} {recoveredSessionsCount === 1 ? "cita rescatada" : "citas rescatadas"} {sessionsPerMonth * cancellationRate * waitlistRecoveryRate < 1 ? "(mín. garantizado)" : ""} × $2,800 = <strong>${monthlyRecoveredRevenue.toLocaleString("es-MX")} MXN</strong>
+                      = <strong>${monthlyRecoveredRevenue.toLocaleString("es-MX")} MXN al mes</strong>
                     </div>
                   </div>
-                  <p className="mt-1.5 text-[10px] text-[#7b5965] leading-relaxed">
-                    <strong>¿Por qué 12% y 85%?</strong> Los estudios fotográficos experimentan ~12% de cancelaciones espontáneas mensuales. En un estudio tradicional este espacio se pierde. Con la lista de espera reactiva por SMS, Camila contacta de inmediato a prospectos calificados (ej. Lucía Benítez) y reasigna el 85% de los espacios vacíos en minutos.
-                  </p>
                 </div>
 
                 {/* Formula 3: Labor Hours Saved */}
@@ -341,24 +732,15 @@ export function OwnerPitchSection({
                   <div className="flex items-center justify-between font-bold text-[#2d1822]">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5 text-[#e0446e]" />
-                      <span>3. Fórmula de Horas de Gestión Ahorradas</span>
+                      <span>3. Horas de Gestión Ahorradas</span>
                     </span>
                     <span className="font-mono text-[10px] text-[#c52752]">
                       {monthlyHoursSaved} h libres/mes
                     </span>
                   </div>
                   <div className="mt-1.5 rounded-lg bg-pink-50/70 p-2 font-mono text-[10px] text-[#2d1822] border border-pink-100">
-                    <span className="font-sans font-bold text-[#7b5965] block text-[9px] uppercase tracking-wider mb-0.5">
-                      Fórmula Matemática:
-                    </span>
-                    <code>Horas_Ahorradas = Sesiones × 2.5 horas/cliente</code>
-                    <div className="mt-1 text-[#2d1822] font-semibold">
-                      = {sessionsPerMonth} × 2.5 h = <strong>{monthlyHoursSaved} horas al mes</strong>
-                    </div>
+                    <code>{sessionsPerMonth} sesiones × 2.5 horas/cliente = <strong>{monthlyHoursSaved} horas libres al mes</strong></code>
                   </div>
-                  <p className="mt-1.5 text-[10px] text-[#7b5965] leading-relaxed">
-                    Elimina llamadas, mensajes repetitivos de &ldquo;¿cuánto cobran?&rdquo;, revisar disponibilidad en libretas, enviar cuentas CLABE para anticipos, enviar recordatorios y mandar la guía de vestuario manualmente. El dueño y su equipo recuperan este tiempo para tomar fotos y editar.
-                  </p>
                 </div>
 
                 {/* Formula 4: Grand Total Annual Impact */}
@@ -367,31 +749,8 @@ export function OwnerPitchSection({
                     4. Impacto Anual Consolidado
                   </span>
                   <p className="text-[10px] text-emerald-950 font-mono">
-                    Total_Anual = (Ingreso_Upsell + Ingreso_Rescate) × 12 meses
-                    <br />
-                    = (${monthlyUpsellRevenue.toLocaleString("es-MX")} + ${monthlyRecoveredRevenue.toLocaleString("es-MX")}) × 12 = <strong>+${totalExtraAnnualRevenue.toLocaleString("es-MX")} MXN/año</strong>
+                    Total_Anual = (${monthlyUpsellRevenue.toLocaleString("es-MX")} + ${monthlyRecoveredRevenue.toLocaleString("es-MX")}) × 12 = <strong>+${totalExtraAnnualRevenue.toLocaleString("es-MX")} MXN/año</strong>
                   </p>
-                </div>
-
-                {/* KPI Strip Explanation Glossary */}
-                <div className="rounded-xl border border-pink-200/80 bg-white p-2.5">
-                  <span className="font-bold text-xs text-[#2d1822] block mb-1.5">
-                    Glosario de Indicadores Clave (KPIs Superiores):
-                  </span>
-                  <ul className="flex flex-col gap-1 text-[10px] text-[#5e3347]">
-                    <li>
-                      <strong>+30% a +82% Ticket Promedio:</strong> Calculado comparando la sesión base de $2,800 MXN con el promedio ponderado del estudio ($3,641 MXN, +$841 MXN netos por cita) y tickets de $4,000 a $5,100 MXN (+43% a +82%) cuando la pareja añade Maquillaje y Video Reel 4K.
-                    </li>
-                    <li>
-                      <strong>&lt; 2 seg Respuesta 24/7:</strong> Medición en tiempo real del motor dual (Google Gemini 2.5 Flash + OpenRouter failover) respondiendo en milisegundos a cualquier hora del día o noche.
-                    </li>
-                    <li>
-                      <strong>15 min Buffer Profoto:</strong> Algoritmo estricto de amortiguamiento matemático: intervalo bloqueado = <code>[Hora_Fin, Hora_Fin + 15m]</code> para evitar calentamiento de luces y prisas.
-                    </li>
-                    <li>
-                      <strong>85% Citas Rescatadas:</strong> Efectividad histórica de la cola reactiva por SMS en llenar cancelaciones sin intervención humana.
-                    </li>
-                  </ul>
                 </div>
               </div>
             )}
@@ -402,19 +761,27 @@ export function OwnerPitchSection({
             <button
               type="button"
               onClick={() => setActiveTab("demos")}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-pink-200 bg-white py-2 px-3 text-xs font-bold text-[#c52752] shadow-2xs hover:bg-pink-50 active:scale-95 transition"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-pink-200 bg-white py-2 px-3 text-xs font-bold text-[#c52752] shadow-2xs hover:bg-pink-50 active:scale-95 transition min-h-[44px]"
             >
               <Zap className="h-3.5 w-3.5 text-[#e0446e]" />
-              <span>Ver Demos &amp; Simulaciones</span>
+              <span>Ver Simulaciones</span>
             </button>
-            <button
-              type="button"
-              onClick={() => handleAction(onRunUpsellDemo)}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#e0446e] to-[#c52752] py-2 px-3 text-xs font-extrabold text-white shadow-xs active:scale-95 transition"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Probar Upsell IA</span>
-            </button>
+            {onOpenScenarioBuilder && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (onCloseModal) onCloseModal();
+                  onOpenScenarioBuilder({
+                    basePrice: customBasePrice,
+                    addOns: customAddOns,
+                  });
+                }}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#e0446e] to-[#c52752] py-2 px-3 text-xs font-extrabold text-white shadow-xs active:scale-95 transition min-h-[44px]"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Constructor 3 Pasos</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -667,6 +1034,46 @@ export function OwnerPitchSection({
           </p>
 
           <div className="flex flex-col gap-2.5">
+            {/* Featured Proposal 1: 3-Step Live Scenario Builder Card */}
+            {onOpenScenarioBuilder && (
+              <div className="rounded-2xl border-2 border-[#e0446e]/60 bg-gradient-to-r from-pink-50 via-[#fffdfb] to-rose-50 p-3.5 shadow-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#e0446e] to-[#c52752] text-white font-black text-sm shadow-xs">
+                      🎯
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-extrabold text-xs text-[#2d1822]">
+                          Constructor de Escenarios en Vivo (3 Pasos)
+                        </span>
+                        <span className="rounded-full bg-pink-100 px-2 py-0.2 text-[9px] font-bold text-[#c52752]">
+                          Propuesta 1 + 3
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[11px] text-[#5e3347] leading-relaxed">
+                        Elige situación, ajusta tus precios de Nogales y lanza a Camila con tu objetivo IA preferido.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onCloseModal) onCloseModal();
+                      onOpenScenarioBuilder({
+                        basePrice: customBasePrice,
+                        addOns: customAddOns,
+                      });
+                    }}
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#e0446e] to-[#c52752] px-3 py-2 text-xs font-black text-white shadow-xs active:scale-95 transition min-h-[44px]"
+                  >
+                    <span>Configurar y Lanzar</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Demo 1: Upselling */}
             <div className="rounded-2xl border border-pink-200 bg-[#faf3ec]/60 p-3 transition hover:border-pink-300">
               <div className="flex items-start justify-between gap-2">

@@ -93,7 +93,7 @@ async function runTests() {
   assert.ok(STUDIO_BACKDROPS.some((b) => b.includes("Rosa Pastel")), "Debe incluir fondo Rosa Pastel");
   assert.ok(STUDIO_BACKDROPS.some((b) => b.includes("Terracota")), "Debe incluir fondo Terracota");
   assert.ok(STUDIO_BACKDROPS.some((b) => b.includes("Cantera")), "Debe incluir fondo Cantera");
-  assert.strictEqual(STUDIO_ADDONS.length, 5, "Deben existir 5 complementos oficiales");
+  assert.strictEqual(STUDIO_ADDONS.length, 6, "Deben existir 6 complementos oficiales");
   const foundAddOns = findStudioAddOns(["maquillaje", "entrega express"]);
   assert.strictEqual(foundAddOns.length, 2, "Debe resolver 2 complementos con findStudioAddOns");
   console.log("✓ 4. Fondos artesanales y complementos verificados con éxito");

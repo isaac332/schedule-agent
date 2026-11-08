@@ -8,6 +8,55 @@ export type ProviderMode =
 
 export type MobileTab = "chat" | "calendar" | "bookings" | "studio" | "roi";
 
+export type ScenarioId =
+  | "pareja-nocturna"
+  | "novia-indecisa"
+  | "cancelacion-rescate"
+  | "buffer-15m"
+  | "custom-case";
+
+export type AIObjectiveId =
+  | "maximize-ticket"
+  | "protect-buffer"
+  | "rescue-waitlist"
+  | "secure-deposit";
+
+export interface CustomAddOnConfig {
+  id: string;
+  name: string;
+  price: number;
+  enabled: boolean;
+  extraMinutes?: number;
+}
+
+export interface ScenarioConfig {
+  scenarioId: ScenarioId;
+  scenarioTitle: string;
+  customBasePrice: number;
+  customAddOns: CustomAddOnConfig[];
+  photographerId: string;
+  photographerName: string;
+  assignedSet: string;
+  aiObjective: AIObjectiveId;
+  customUserMessage?: string;
+}
+
+export interface ScenarioExecutionResult {
+  scenarioId: ScenarioId;
+  scenarioTitle: string;
+  ticketBefore: number;
+  ticketAfter: number;
+  netProfit: number;
+  latencyMs: number;
+  objectiveId: AIObjectiveId;
+  objectiveLabel: string;
+  objectiveAchieved: boolean;
+  photographerName: string;
+  assignedSet: string;
+  activeAddOnsCount: number;
+  timestamp: string;
+  summaryExplanation: string;
+}
 
 export interface StudioService {
   id: string;

@@ -31,6 +31,7 @@ import {
   getAppointmentsByDate,
   updateBookingRecord,
 } from "../storage/appointmentStore";
+import type { ScenarioConfig } from "../studio/types";
 
 export const STUDIO_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   {
@@ -339,17 +340,32 @@ export const STUDIO_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
 
 export const STUDIO_TOOLS: Tool[] = [createToolbox(STUDIO_FUNCTION_DECLARATIONS)];
 
-export function createStudioToolFunctions(defaultClientPhone?: string): ToolFunctionsMap {
+export function createStudioToolFunctions(
+  defaultClientPhone?: string,
+  scenarioContext?: ScenarioConfig,
+): ToolFunctionsMap {
   return {
     getStudioServices: async (rawArgs: unknown) => {
       const args = (rawArgs || {}) as { category?: string };
       const cat = args.category?.toLowerCase().trim();
-      const services =
+      let services =
         cat && cat !== "all"
           ? STUDIO_SERVICES.filter(
               (s) => s.category === cat || s.id.includes(cat) || s.name.toLowerCase().includes(cat),
             )
           : STUDIO_SERVICES;
+
+      if (scenarioContext?.customBasePrice) {
+        services = services.map((s) =>
+          s.id === "pareja-juntos"
+            ? {
+                ...s,
+                price: scenarioContext.customBasePrice,
+                depositAmount: Math.round(scenarioContext.customBasePrice * 0.3),
+              }
+            : s,
+        );
+      }
 
       return {
         studio: STUDIO_INFO,
@@ -482,30 +498,47 @@ export function createStudioToolFunctions(defaultClientPhone?: string): ToolFunc
       };
 
       const service = findStudioService(args.serviceId || "") || STUDIO_SERVICES[0];
+      const basePrice =
+        scenarioContext?.customBasePrice && (service.id === "pareja-juntos" || !args.serviceId)
+          ? scenarioContext.customBasePrice
+          : service.price;
+
       const matchedAddOns = args.addOns ? findStudioAddOns(args.addOns) : [];
       const participants = typeof args.participants === "number" ? args.participants : service.maxParticipants;
 
-      const addOnsTotal = matchedAddOns.reduce((sum, a) => sum + a.price, 0);
-      const extraMinutes = matchedAddOns.reduce((sum, a) => sum + a.extraMinutes, 0);
+      // Map matched add-ons to custom prices from scenarioContext if provided
+      const resolvedAddOns = matchedAddOns.map((addon) => {
+        const custom = scenarioContext?.customAddOns?.find((c) => c.id === addon.id);
+        return {
+          ...addon,
+          price: custom ? custom.price : addon.price,
+        };
+      });
+
+      const addOnsTotal = resolvedAddOns.reduce((sum, a) => sum + a.price, 0);
+      const extraMinutes = resolvedAddOns.reduce((sum, a) => sum + a.extraMinutes, 0);
       const extraParticipantFee =
         participants > service.maxParticipants
           ? (participants - service.maxParticipants) * 450 // $450 MXN por persona extra
           : 0;
 
-      const totalPrice = service.price + addOnsTotal + extraParticipantFee;
+      const totalPrice = basePrice + addOnsTotal + extraParticipantFee;
       const totalDurationMinutes = service.durationMinutes + extraMinutes;
-      const depositDueToday = service.depositAmount;
+      const depositDueToday =
+        scenarioContext?.customBasePrice && (service.id === "pareja-juntos" || !args.serviceId)
+          ? Math.round(scenarioContext.customBasePrice * 0.3)
+          : service.depositAmount;
       const balanceDueAtShoot = totalPrice - depositDueToday;
 
       return {
         package: {
           id: service.id,
           name: service.name,
-          basePrice: service.price,
+          basePrice,
           baseDurationMinutes: service.durationMinutes,
           maxIncludedParticipants: service.maxParticipants,
         },
-        selectedAddOns: matchedAddOns.map((a) => ({
+        selectedAddOns: resolvedAddOns.map((a) => ({
           id: a.id,
           name: a.name,
           price: a.price,
